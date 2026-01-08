@@ -44,20 +44,20 @@
           </div>
           
           <div class="flex items-center gap-4 flex-wrap pt-2">
-            <label class="flex items-center gap-2"><input id="epf" type="checkbox"> <span>EPF</span></label>
+            <label class="flex items-center gap-2"><input id="epf" type="checkbox" checked> <span>EPF</span></label>
             <label class="flex items-center gap-2"><input id="bonusCheck" type="checkbox"> <span>Bonus</span></label>
             <label class="flex items-center gap-2"><input id="fuelCheck" type="checkbox"> <span>Fuel</span></label>
-            <label class="flex items-center gap-2"><input id="ptCheck" type="checkbox"> <span>PT</span></label>
+            <label class="flex items-center gap-2"><input id="ptCheck" type="checkbox" checked> <span>PT</span></label>
           </div>
 
-          <div id="ptAmountWrap" style="display:none;" class="pl-4 border-l-2">
+          <div id="ptAmountWrap" class="pl-4 border-l-2">
             <label class="block text-xs font-medium">Monthly PT Amount (₹)</label>
             <input id="ptMonthlyAmount" type="number" value="200" class="w-full p-1 border rounded text-sm" />
           </div>
 
           <div class="flex gap-2 pt-4">
-            <button type="submit" id="addBtn" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-slate-400">Add to Sheet</button>
-            <button type="button" id="calcPreview" class="px-4 py-2 bg-slate-200 rounded">Preview</button>
+            <button type="submit" id="addBtn" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed">Add to Sheet</button>
+            <button type="button" id="calcPreview" class="px-4 py-2 bg-slate-200 rounded hover:bg-slate-300">Preview</button>
           </div>
         </form>
       </section>
@@ -65,7 +65,7 @@
       <section class="col-span-1 md:col-span-2 bg-white p-5 rounded-2xl shadow">
         <h2 class="font-medium mb-3">Breakdown Preview</h2>
         <div id="previewCard" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div class="text-slate-400 italic">Fill details to see calculation...</div>
+          <div class="text-slate-400 italic">Enter details and click "Preview" to enable adding...</div>
         </div>
       </section>
     </main>
@@ -73,7 +73,7 @@
     <section class="mt-6 bg-white p-5 rounded-2xl shadow">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-medium">Database (Google Sheets)</h3>
-        <button id="refresh" class="text-sm text-indigo-600 font-medium">Refresh List</button>
+        <button id="refresh" class="text-sm text-indigo-600 font-medium hover:underline">Refresh List</button>
       </div>
       <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
@@ -85,175 +85,196 @@
   </div>
 
 <script>
-// REPLACE THIS URL WITH YOUR DEPLOYED GOOGLE APPS SCRIPT URL
+// --- CONFIGURATION ---
+// Replace this with your Google Apps Script Web App URL
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpVyeLn1lfgqTlGslX_UFANzjVwuxfzcsA_1R5haR0CsyVShZJRiXoDyCsLsTpcwyg/exec';
 
 const qs = sel => document.querySelector(sel);
 const currency = x => (x === '-' || isNaN(x)) ? '-' : '₹' + Number(x).toLocaleString('en-IN');
 
-// Track if calculation has been performed
 let isCalculated = false;
 
-// 1. Improved Calculation Logic (Includes Reverse Search for Yearly CTC)
-function calculate(inputs) {
-    let { mode, value, epf, bonusChecked, fuelChecked, ptChecked, ptMonthlyAmount } = inputs;
+// --- CORE CALCULATION LOGIC ---
+function calculateAllFields(inputs) {
+    let { grossMonthly, epf, bonusChecked, fuelChecked, ptChecked, ptMonthlyAmount } = inputs;
+    grossMonthly = Number(grossMonthly) || 0;
     
-    let grossMonthly = 0;
-    
-    if (mode === 'yearly') {
-        // Simple reverse calculation for the preview
-        // Total Yearly CTC = (Monthly Gross + Fuel + EPF Employer) * 12 + Bonus
-        let target = Number(value) || 0;
-        let fuelEstimate = fuelChecked ? 7500 : 0; // Simplified for reverse logic
-        let epfFactor = epf ? 0.06 : 0; // Estimate: 12% of 50% basic
-        
-        grossMonthly = Math.round((target / (12 * (1 + epfFactor))) - fuelEstimate);
-    } else {
-        grossMonthly = Number(value) || 0;
-    }
-
+    // 1. Basic/HRA/TA split
     let basic = Math.round(grossMonthly * 0.5);
     let hra = Math.round(grossMonthly * 0.35);
     let ta = Math.round(grossMonthly * 0.15);
+    
+    // 2. Allowances & Bonus
     let fuel = fuelChecked ? (grossMonthly >= 50000 ? 7500 : Math.round(grossMonthly * 0.15)) : 0;
     let bonus = bonusChecked ? grossMonthly : 0;
     
+    // 3. EPF (Restricted logic: max ₹1800)
     let epfEmp = epf ? Math.min(Math.round(basic * 0.12), 1800) : 0;
-    let epfCompany = epf ? Math.min(Math.round(basic * 0.12), 1800) : 0;
+    let epfEmployer = epf ? Math.min(Math.round(basic * 0.12), 1800) : 0;
+    
+    // 4. ESI (Mandatory if Gross <= ₹21,000)
+    let isEsi = grossMonthly <= 21000;
+    let esiEmployee = isEsi ? Math.round(grossMonthly * 0.0075) : 0; // 0.75% deduction
+    let esiEmployer = isEsi ? Math.round(grossMonthly * 0.0325) : 0; // 3.25% cost to company
+    
+    // 5. Professional Tax (PT)
     let pt = ptChecked ? (Number(ptMonthlyAmount) || 0) : 0;
 
-    let monthlyCTC = grossMonthly + fuel + epfCompany;
-    let netYearly = (monthlyCTC * 12) + bonus;
-    let takeHome = (basic + hra + ta + fuel) - (epfEmp + pt);
+    // --- TOTALS ---
+    let monthlyEmployerContributions = epfEmployer + esiEmployer; 
+    let monthlyCTC = grossMonthly + fuel + monthlyEmployerContributions;
+    let netYearlyCTC = (monthlyCTC * 12) + bonus;
+    
+    let grossSalaryPayable = basic + hra + ta + fuel;
+    let totalDeductions = epfEmp + esiEmployee + pt;
+    let netTakeHome = grossSalaryPayable - totalDeductions;
 
     return {
-        'Gross Monthly': grossMonthly, 'Net CTC Yearly': netYearly, 
-        'Monthly CTC': monthlyCTC, 'Net Take-Home (Monthly)': takeHome,
-        'Basic': basic, 'HRA': hra, 'TA': ta, 'Fuel': fuel, 
-        'Bonus Amount': bonus, 'EPF Employee': epfEmp, 
-        'EPF Employer': epfCompany, 'PT Amount': pt
+        'Gross Monthly': grossMonthly,
+        'Net CTC Yearly': netYearlyCTC,
+        'Monthly CTC': monthlyCTC,
+        'Net Take-Home (Monthly)': netTakeHome,
+        'Basic': basic, 'HRA': hra, 'TA': ta, 'Fuel': fuel,
+        'Bonus Amount': bonus, 
+        'EPF Employee': epfEmp, 'EPF Employer': epfEmployer,
+        'ESI Employee': esiEmployee, 'ESI Employer': esiEmployer,
+        'PT Amount': pt, 'Gross Salary Payable': grossSalaryPayable
     };
 }
 
-// // 2. Function to Update Preview UI
-// function showPreview() {
-//     const mode = qs('input[name="calcMode"]:checked').value;
-//     const val = mode === 'monthly' ? qs('#grossMonthly').value : qs('#yearlyCtc').value;
-    
-//     if (!val) {
-//         alert("Please enter a salary amount first.");
-//         return;
-//     }
-
-//     const calcData = calculate({
-//         mode: mode,
-//         value: val,
-//         epf: qs('#epf').checked,
-//         bonusChecked: qs('#bonusCheck').checked,
-//         fuelChecked: qs('#fuelCheck').checked,
-//         ptChecked: qs('#ptCheck').checked,
-//         ptMonthlyAmount: qs('#ptMonthlyAmount').value
-//     });
-
-//     const previewCard = qs('#previewCard');
-//     previewCard.innerHTML = Object.entries(calcData).map(([key, value]) => `
-//         <div class="p-3 bg-slate-50 rounded">
-//             <div class="text-xs text-slate-500">${key}</div>
-//             <div class="font-medium">${typeof value === 'number' ? currency(value) : value}</div>
-//         </div>
-//     `).join('');
-
-//     // Enable the "Add to Sheet" button now that preview is generated
-//     isCalculated = true;
-//     updateButtonState();
-// }
-
-// 3. Manage "Add to Sheet" Button State
-function updateButtonState() {
-    const addBtn = qs('#addBtn');
-    addBtn.disabled = !isCalculated;
+// Binary Search for exact Yearly CTC reverse calculation
+function findGrossFromTarget(targetCTC, options) {
+    let low = 0, high = targetCTC, bestGuess = 0;
+    for (let i = 0; i < 40; i++) {
+        let guess = (low + high) / 2;
+        let result = calculateAllFields({ grossMonthly: guess, ...options });
+        if (result['Net CTC Yearly'] < targetCTC) { low = guess; } 
+        else { high = guess; }
+        bestGuess = guess;
+    }
+    return bestGuess;
 }
 
-// 4. Listeners
-qs('#calcPreview').addEventListener('click', showPreview);
+// --- UI INTERACTIONS ---
+function updateButtonState() {
+    qs('#addBtn').disabled = !isCalculated;
+}
 
-// Disable add button if any input changes (requiring a new preview)
-qs('#empForm').addEventListener('input', () => {
+function showPreview() {
+    const mode = qs('input[name="calcMode"]:checked').value;
+    const commonInputs = {
+        epf: qs('#epf').checked,
+        bonusChecked: qs('#bonusCheck').checked,
+        fuelChecked: qs('#fuelCheck').checked,
+        ptChecked: qs('#ptCheck').checked,
+        ptMonthlyAmount: qs('#ptMonthlyAmount').value
+    };
+
+    let inputs = { ...commonInputs };
+    if (mode === 'yearly') {
+        const target = Number(qs('#yearlyCtc').value) || 0;
+        inputs.grossMonthly = findGrossFromTarget(target, commonInputs);
+    } else {
+        inputs.grossMonthly = qs('#grossMonthly').value;
+    }
+
+    const data = calculateAllFields(inputs);
+    const card = qs('#previewCard');
+    
+    // Define display order
+    const order = [
+        'Net CTC Yearly', 'Monthly CTC', 'Gross Monthly', 'Net Take-Home (Monthly)',
+        'Basic', 'HRA', 'TA', 'Fuel', 'Bonus Amount', 
+        'EPF Employee', 'ESI Employee', 'PT Amount', 'EPF Employer', 'ESI Employer'
+    ];
+
+    card.innerHTML = order.map(key => `
+        <div class="p-3 bg-slate-50 rounded border ${key.includes('Net CTC') ? 'bg-indigo-50 border-indigo-200' : 'border-transparent'}">
+            <div class="text-xs text-slate-500">${key}</div>
+            <div class="font-medium ${key.includes('Net CTC') ? 'text-indigo-700 font-bold' : ''}">${currency(data[key])}</div>
+        </div>
+    `).join('');
+
+    isCalculated = true;
+    updateButtonState();
+    return data;
+}
+
+// PT Toggle
+qs('#ptCheck').addEventListener('change', e => {
+    qs('#ptAmountWrap').style.display = e.target.checked ? 'block' : 'none';
     isCalculated = false;
     updateButtonState();
 });
 
-// PT Toggle
-qs('#ptCheck').addEventListener('change', e => qs('#ptAmountWrap').style.display = e.target.checked ? 'block' : 'none');
-
-// Mode Switch
-document.querySelectorAll('input[name="calcMode"]').forEach(r => {
-    r.addEventListener('change', function() {
-        qs('#monthlyInputWrap').style.display = this.value === 'monthly' ? 'block' : 'none';
-        qs('#yearlyInputWrap').style.display = this.value === 'yearly' ? 'block' : 'none';
+// Reset preview on input change
+qs('#empForm').addEventListener('input', (e) => {
+    if(e.target.id !== 'calcPreview') {
         isCalculated = false;
         updateButtonState();
-    });
+    }
 });
 
-// Form Submission
+qs('input[name="calcMode"]').parentElement.parentElement.addEventListener('change', (e) => {
+    qs('#monthlyInputWrap').style.display = qs('input[name="calcMode"]:checked').value === 'monthly' ? 'block' : 'none';
+    qs('#yearlyInputWrap').style.display = qs('input[name="calcMode"]:checked').value === 'yearly' ? 'block' : 'none';
+});
+
+qs('#calcPreview').addEventListener('click', showPreview);
+
+// --- SUBMISSION ---
 qs('#empForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!isCalculated) return;
 
     const btn = qs('#addBtn');
+    btn.textContent = 'Sending...';
     btn.disabled = true;
-    btn.textContent = 'Uploading...';
 
-    // Combine Identity Data with Calculated Data
-    const mode = qs('input[name="calcMode"]:checked').value;
-    const val = mode === 'monthly' ? qs('#grossMonthly').value : qs('#yearlyCtc').value;
-    const finalCalc = calculate({
-        mode: mode, value: val, epf: qs('#epf').checked,
-        bonusChecked: qs('#bonusCheck').checked, fuelChecked: qs('#fuelCheck').checked,
-        ptChecked: qs('#ptCheck').checked, ptMonthlyAmount: qs('#ptMonthlyAmount').value
-    });
-
+    const data = showPreview(); // Re-run to get latest data
     const payload = {
         'Emp ID': qs('#empId').value,
         'Name': qs('#name').value,
-        ...finalCalc
+        ...data
     };
 
     try {
         await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
+            mode: 'no-cors', // Crucial for Google Apps Script redirects
             body: JSON.stringify(payload)
         });
-        alert('Employee Added Successfully!');
+        alert('Employee data saved to Google Sheet!');
         e.target.reset();
         isCalculated = false;
         updateButtonState();
-        qs('#previewCard').innerHTML = '<div class="text-slate-400 italic">Fill details to see calculation...</div>';
+        qs('#previewCard').innerHTML = '<div class="text-slate-400 italic">Enter details and click "Preview" to enable adding...</div>';
+        fetchList();
     } catch (err) {
-        alert('Error: ' + err.message);
+        alert('Failed to save data: ' + err.message);
     } finally {
         btn.textContent = 'Add to Sheet';
     }
 });
 
-// Database Fetching
+// --- GOOGLE SHEETS LIST ---
 async function fetchList() {
     try {
         const res = await fetch(`${APPS_SCRIPT_URL}?action=get`);
-        const data = await res.json();
-        renderTable(data.rows);
-    } catch (e) { console.error("Fetch failed", e); }
+        const j = await res.json();
+        if (j.status === 'ok') renderTable(j.rows);
+    } catch (e) {
+        console.error("List fetch error:", e);
+    }
 }
 
 function renderTable(rows) {
     if (!rows || rows.length === 0) return;
     const headers = Object.keys(rows[0]);
-    qs('#tableHead').innerHTML = headers.map(h => `<th class="px-3 py-2 text-left">${h}</th>`).join('');
+    qs('#tableHead').innerHTML = headers.map(h => `<th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-wider">${h}</th>`).join('');
     qs('#tableBody').innerHTML = rows.map(r => `
-        <tr class="border-t hover:bg-slate-50">
-            ${headers.map(h => `<td class="px-3 py-2">${typeof r[h] === 'number' ? currency(r[h]) : r[h]}</td>`).join('')}
+        <tr class="border-t hover:bg-slate-50 transition-colors">
+            ${headers.map(h => `<td class="px-3 py-2 whitespace-nowrap">${typeof r[h] === 'number' ? currency(r[h]) : r[h]}</td>`).join('')}
         </tr>
     `).join('');
 }
@@ -263,101 +284,6 @@ window.onload = () => {
     updateButtonState();
     fetchList();
 };
-
-// 1. Precise Core Calculation Engine
-function calculateAllFields(inputs) {
-    let { grossMonthly, epf, bonusChecked, fuelChecked, ptChecked, ptMonthlyAmount } = inputs;
-    grossMonthly = Number(grossMonthly) || 0;
-    
-    // Standard Splits
-    let basic = Math.round(grossMonthly * 0.5);
-    let hra = Math.round(grossMonthly * 0.35);
-    let ta = Math.round(grossMonthly * 0.15);
-    
-    // Benefits
-    let fuel = fuelChecked ? (grossMonthly >= 50000 ? 7500 : Math.round(grossMonthly * 0.15)) : 0;
-    let bonus = bonusChecked ? grossMonthly : 0;
-    
-    // Statutory (EPF Restricted Logic)
-    let epfEmp = epf ? Math.min(Math.round(basic * 0.12), 1800) : 0;
-    let epfEmployer = epf ? Math.min(Math.round(basic * 0.12), 1800) : 0;
-    
-    // ESI (Automatic if Gross Monthly <= 21000)
-    let isEsi = grossMonthly <= 21000;
-    let esiEmp = isEsi ? Math.round(grossMonthly * 0.0075) : 0;
-    let esiEmployer = isEsi ? Math.round(grossMonthly * 0.0325) : 0;
-    
-    let pt = ptChecked ? (Number(ptMonthlyAmount) || 0) : 0;
-
-    // Totals
-    let monthlyEmployerContributions = epfEmployer + esiEmployer; 
-    let monthlyCTC = grossMonthly + fuel + monthlyEmployerContributions;
-    let netYearlyCTC = (monthlyCTC * 12) + bonus;
-    
-    let grossSalaryPayable = basic + hra + ta + fuel;
-    let netTakeHome = grossSalaryPayable - (epfEmp + esiEmp + pt);
-
-    return {
-        'Gross Monthly': grossMonthly,
-        'Net CTC Yearly': netYearlyCTC,
-        'Monthly CTC': monthlyCTC,
-        'Net Take-Home (Monthly)': netTakeHome,
-        'Basic': basic, 'HRA': hra, 'TA': ta, 'Fuel': fuel,
-        'Bonus Amount': bonus, 'EPF Employee': epfEmp,
-        'EPF Employer': epfEmployer, 'ESI Employer': esiEmployer,
-        'PT Amount': pt, 'Gross Salary Payable': grossSalaryPayable
-    };
-}
-
-// 2. The Precision "Search" Engine (Finds exact Monthly Gross for a Target CTC)
-function findGrossFromTarget(targetCTC, options) {
-    let low = 0, high = targetCTC, bestGuess = 0;
-    for (let i = 0; i < 40; i++) { // 40 iterations for paise-perfect accuracy
-        let guess = (low + high) / 2;
-        let result = calculateAllFields({ grossMonthly: guess, ...options });
-        if (result['Net CTC Yearly'] < targetCTC) {
-            low = guess;
-        } else {
-            high = guess;
-        }
-        bestGuess = guess;
-    }
-    return bestGuess;
-}
-
-// 3. Updated Show Preview Function
-function showPreview() {
-    const mode = qs('input[name="calcMode"]:checked').value;
-    const epf = qs('#epf').checked;
-    const bonusChecked = qs('#bonusCheck').checked;
-    const fuelChecked = qs('#fuelCheck').checked;
-    const ptChecked = qs('#ptCheck').checked;
-    const ptMonthlyAmount = qs('#ptMonthlyAmount').value;
-
-    let finalInputs = { epf, bonusChecked, fuelChecked, ptChecked, ptMonthlyAmount };
-    
-    if (mode === 'yearly') {
-        const target = Number(qs('#yearlyCtc').value) || 0;
-        finalInputs.grossMonthly = findGrossFromTarget(target, finalInputs);
-    } else {
-        finalInputs.grossMonthly = qs('#grossMonthly').value;
-    }
-
-    const calcData = calculateAllFields(finalInputs);
-
-    // Update UI
-    const previewCard = qs('#previewCard');
-    previewCard.innerHTML = Object.entries(calcData).map(([key, value]) => `
-        <div class="p-3 bg-slate-50 rounded border ${key === 'Net CTC Yearly' ? 'bg-indigo-50 border-indigo-200' : 'border-transparent'}">
-            <div class="text-xs text-slate-500">${key}</div>
-            <div class="font-medium ${key === 'Net CTC Yearly' ? 'text-indigo-700' : ''}">${typeof value === 'number' ? currency(value) : value}</div>
-        </div>
-    `).join('');
-
-    isCalculated = true;
-    updateButtonState();
-}
-  
 </script>
 </body>
 </html>
