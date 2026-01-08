@@ -9,140 +9,144 @@
 <body class="bg-slate-50 text-slate-800">
   <div class="max-w-6xl mx-auto p-6">
     <header class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-semibold">Employee CTC Calculator</h1>
-      <div id="statusIndicator" class="text-sm text-amber-600">Checking connection...</div>
+      <h1 class="text-2xl font-semibold text-slate-700">Employee CTC Calculator</h1>
+      <div id="statusIndicator" class="text-sm text-amber-600 font-medium">Checking connection...</div>
     </header>
 
-    <main class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <section class="col-span-1 bg-white p-5 rounded-2xl shadow">
-        <h2 class="font-medium mb-3">Add Employee</h2>
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <section class="col-span-1 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <h2 class="font-bold text-slate-700 mb-4 border-b pb-2">Add Employee</h2>
         <form id="empForm" class="space-y-4">
-          <div class="p-3 bg-slate-100 rounded-lg">
-            <label class="block text-sm font-medium mb-2">Calculation Mode</label>
+          <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+            <label class="block text-sm font-bold mb-2 text-slate-600">Calculation Mode</label>
             <div class="flex gap-4">
-              <label class="flex items-center gap-2"><input type="radio" name="calcMode" value="monthly" checked> <span>Monthly Gross</span></label>
-              <label class="flex items-center gap-2"><input type="radio" name="calcMode" value="yearly"> <span>Yearly CTC</span></label>
+              <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="calcMode" value="monthly" checked class="accent-indigo-600"> <span class="text-sm">Monthly Gross</span></label>
+              <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="calcMode" value="yearly" class="accent-indigo-600"> <span class="text-sm">Yearly CTC</span></label>
             </div>
           </div>
 
           <div>
-            <label class="block text-sm">Employee ID</label>
-            <input id="empId" required class="w-full p-2 border rounded" />
+            <label class="block text-sm font-semibold text-slate-600">Employee ID</label>
+            <input id="empId" required placeholder="e.g. 1302" class="w-full p-2 border rounded mt-1 focus:ring-2 focus:ring-indigo-500 outline-none" />
           </div>
           <div>
-            <label class="block text-sm">Name</label>
-            <input id="name" required class="w-full p-2 border rounded" />
+            <label class="block text-sm font-semibold text-slate-600">Name</label>
+            <input id="name" required placeholder="Employee Name" class="w-full p-2 border rounded mt-1 focus:ring-2 focus:ring-indigo-500 outline-none" />
           </div>
 
           <div id="monthlyInputWrap">
-            <label class="block text-sm">Gross Monthly (₹)</label>
-            <input id="grossMonthly" type="number" class="w-full p-2 border rounded" />
+            <label class="block text-sm font-semibold text-slate-600">Gross Monthly (₹)</label>
+            <input id="grossMonthly" type="number" placeholder="10000" class="w-full p-2 border rounded mt-1" />
           </div>
           <div id="yearlyInputWrap" style="display:none;">
-            <label class="block text-sm">Net CTC Yearly (₹)</label>
-            <input id="yearlyCtc" type="number" class="w-full p-2 border rounded" />
+            <label class="block text-sm font-semibold text-slate-600">Target Net CTC Yearly (₹)</label>
+            <input id="yearlyCtc" type="number" placeholder="500000" class="w-full p-2 border rounded mt-1" />
           </div>
           
-          <div class="flex items-center gap-4 flex-wrap pt-2">
-            <label class="flex items-center gap-2"><input id="epf" type="checkbox" checked> <span>EPF</span></label>
-            <label class="flex items-center gap-2"><input id="bonusCheck" type="checkbox"> <span>Bonus</span></label>
-            <label class="flex items-center gap-2"><input id="fuelCheck" type="checkbox"> <span>Fuel</span></label>
-            <label class="flex items-center gap-2"><input id="ptCheck" type="checkbox" checked> <span>PT</span></label>
+          <div class="grid grid-cols-2 gap-2 pt-2">
+            <label class="flex items-center gap-2 text-sm cursor-pointer"><input id="epf" type="checkbox" class="accent-indigo-600"> <span>EPF</span></label>
+            <label class="flex items-center gap-2 text-sm cursor-pointer"><input id="bonusCheck" type="checkbox" class="accent-indigo-600"> <span>Bonus</span></label>
+            <label class="flex items-center gap-2 text-sm cursor-pointer"><input id="fuelCheck" type="checkbox" class="accent-indigo-600"> <span>Fuel</span></label>
+            <label class="flex items-center gap-2 text-sm cursor-pointer"><input id="ptCheck" type="checkbox" class="accent-indigo-600"> <span>PT</span></label>
           </div>
 
-          <div id="ptAmountWrap" class="pl-4 border-l-2">
-            <label class="block text-xs font-medium">Monthly PT Amount (₹)</label>
-            <input id="ptMonthlyAmount" type="number" value="200" class="w-full p-1 border rounded text-sm" />
+          <div id="ptAmountWrap" style="display:none;" class="pl-4 border-l-2 border-indigo-200">
+            <label class="block text-xs font-bold text-slate-500 uppercase">Monthly PT Amount (₹)</label>
+            <input id="ptMonthlyAmount" type="number" value="200" class="w-full p-2 border rounded mt-1 text-sm" />
           </div>
 
           <div class="flex gap-2 pt-4">
-            <button type="submit" id="addBtn" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed">Add to Sheet</button>
-            <button type="button" id="calcPreview" class="px-4 py-2 bg-slate-200 rounded hover:bg-slate-300">Preview</button>
+            <button type="submit" id="addBtn" class="flex-1 px-4 py-2 bg-indigo-600 text-white font-bold rounded shadow-md hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-all">Add to Sheet</button>
+            <button type="button" id="calcPreview" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded hover:bg-slate-300 transition-all">Preview</button>
           </div>
         </form>
       </section>
 
-      <section class="col-span-1 md:col-span-2 bg-white p-5 rounded-2xl shadow">
-        <h2 class="font-medium mb-3">Breakdown Preview</h2>
+      <section class="col-span-1 lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+        <h2 class="font-bold text-slate-700 mb-4 border-b pb-2">CTC Breakdown Preview</h2>
         <div id="previewCard" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div class="text-slate-400 italic">Enter details and click "Preview" to enable adding...</div>
+          <div class="col-span-full text-center py-12 text-slate-400 italic">Fill in employee details and click "Preview" to see the breakdown and enable saving.</div>
         </div>
       </section>
     </main>
 
-    <section class="mt-6 bg-white p-5 rounded-2xl shadow">
+    <section class="mt-8 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="font-medium">Database (Google Sheets)</h3>
-        <button id="refresh" class="text-sm text-indigo-600 font-medium hover:underline">Refresh List</button>
+        <h3 class="font-bold text-slate-700">Employee Database (Google Sheets)</h3>
+        <button id="refresh" class="text-sm text-indigo-600 font-bold hover:underline">Refresh List</button>
       </div>
       <div class="overflow-x-auto">
-        <table class="min-w-full text-sm">
-          <thead class="bg-slate-50 text-slate-600"><tr id="tableHead"></tr></thead>
-          <tbody id="tableBody"></tbody>
+        <table class="min-w-full text-xs">
+          <thead class="bg-slate-100 text-slate-600 uppercase font-bold">
+            <tr id="tableHead"></tr>
+          </thead>
+          <tbody id="tableBody" class="text-slate-700 divide-y divide-slate-100"></tbody>
         </table>
       </div>
     </section>
   </div>
 
 <script>
-// --- CONFIGURATION ---
-// Replace this with your Google Apps Script Web App URL
+// --- CONFIG ---
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpVyeLn1lfgqTlGslX_UFANzjVwuxfzcsA_1R5haR0CsyVShZJRiXoDyCsLsTpcwyg/exec';
 
 const qs = sel => document.querySelector(sel);
-const currency = x => (x === '-' || isNaN(x)) ? '-' : '₹' + Number(x).toLocaleString('en-IN');
+const currency = x => (x === '-' || isNaN(x)) ? '₹0' : '₹' + Number(x).toLocaleString('en-IN');
 
 let isCalculated = false;
 
-// --- CORE CALCULATION LOGIC ---
+// --- CALCULATION ENGINE ---
 function calculateAllFields(inputs) {
     let { grossMonthly, epf, bonusChecked, fuelChecked, ptChecked, ptMonthlyAmount } = inputs;
     grossMonthly = Number(grossMonthly) || 0;
     
-    // 1. Basic/HRA/TA split
+    // 1. Core Components
     let basic = Math.round(grossMonthly * 0.5);
     let hra = Math.round(grossMonthly * 0.35);
     let ta = Math.round(grossMonthly * 0.15);
     
-    // 2. Allowances & Bonus
+    // 2. Variable Allowances
     let fuel = fuelChecked ? (grossMonthly >= 50000 ? 7500 : Math.round(grossMonthly * 0.15)) : 0;
     let bonus = bonusChecked ? grossMonthly : 0;
     
-    // 3. EPF (Restricted logic: max ₹1800)
+    // 3. EPF & Company Statutory (Restricted at ₹1800)
     let epfEmp = epf ? Math.min(Math.round(basic * 0.12), 1800) : 0;
     let epfEmployer = epf ? Math.min(Math.round(basic * 0.12), 1800) : 0;
+    let edli = epf ? Math.min(Math.round(basic * 0.005), 75) : 0;
+    let admin = epf ? Math.min(Math.round(basic * 0.005), 75) : 0;
     
-    // 4. ESI (Mandatory if Gross <= ₹21,000)
+    // 4. ESI (Employee 0.75%, Employer 3.25%)
     let isEsi = grossMonthly <= 21000;
-    let esiEmployee = isEsi ? Math.round(grossMonthly * 0.0075) : 0; // 0.75% deduction
-    let esiEmployer = isEsi ? Math.round(grossMonthly * 0.0325) : 0; // 3.25% cost to company
+    let esiEmployee = isEsi ? Math.round(grossMonthly * 0.0075) : 0; 
+    let esiEmployer = isEsi ? Math.round(grossMonthly * 0.0325) : 0; 
     
-    // 5. Professional Tax (PT)
+    // 5. Professional Tax
     let pt = ptChecked ? (Number(ptMonthlyAmount) || 0) : 0;
 
-    // --- TOTALS ---
-    let monthlyEmployerContributions = epfEmployer + esiEmployer; 
-    let monthlyCTC = grossMonthly + fuel + monthlyEmployerContributions;
-    let netYearlyCTC = (monthlyCTC * 12) + bonus;
-    
+    // --- AGGREGATES ---
     let grossSalaryPayable = basic + hra + ta + fuel;
-    let totalDeductions = epfEmp + esiEmployee + pt;
-    let netTakeHome = grossSalaryPayable - totalDeductions;
+    let grossCTC = grossMonthly * 12;
+    let monthlyEmployerContributions = epfEmployer + esiEmployer + edli + admin; 
+    let monthlyCTC = grossMonthly + fuel + monthlyEmployerContributions;
+    
+    let netYearlyCTC = (monthlyCTC * 12) + bonus;
+    let netTakeHome = grossSalaryPayable - (epfEmp + esiEmployee + pt);
 
     return {
-        'Gross Monthly': grossMonthly,
         'Net CTC Yearly': netYearlyCTC,
+        'Gross CTC': grossCTC,
         'Monthly CTC': monthlyCTC,
         'Net Take-Home (Monthly)': netTakeHome,
+        'Gross Salary Payable': grossSalaryPayable,
         'Basic': basic, 'HRA': hra, 'TA': ta, 'Fuel': fuel,
         'Bonus Amount': bonus, 
-        'EPF Employee': epfEmp, 'EPF Employer': epfEmployer,
-        'ESI Employee': esiEmployee, 'ESI Employer': esiEmployer,
-        'PT Amount': pt, 'Gross Salary Payable': grossSalaryPayable
+        'EPF Employer': epfEmployer, 'EPF Employee': epfEmp, 
+        'ESI Employer': esiEmployer, 'ESI Employee': esiEmployee, 
+        'PT Amount': pt, 'EDLi': edli, 'Admin': admin
     };
 }
 
-// Binary Search for exact Yearly CTC reverse calculation
+// Precision Binary Search for Yearly mode
 function findGrossFromTarget(targetCTC, options) {
     let low = 0, high = targetCTC, bestGuess = 0;
     for (let i = 0; i < 40; i++) {
@@ -155,14 +159,10 @@ function findGrossFromTarget(targetCTC, options) {
     return bestGuess;
 }
 
-// --- UI INTERACTIONS ---
-function updateButtonState() {
-    qs('#addBtn').disabled = !isCalculated;
-}
-
+// --- UI LOGIC ---
 function showPreview() {
     const mode = qs('input[name="calcMode"]:checked').value;
-    const commonInputs = {
+    const baseParams = {
         epf: qs('#epf').checked,
         bonusChecked: qs('#bonusCheck').checked,
         fuelChecked: qs('#fuelCheck').checked,
@@ -170,10 +170,10 @@ function showPreview() {
         ptMonthlyAmount: qs('#ptMonthlyAmount').value
     };
 
-    let inputs = { ...commonInputs };
+    let inputs = { ...baseParams };
     if (mode === 'yearly') {
         const target = Number(qs('#yearlyCtc').value) || 0;
-        inputs.grossMonthly = findGrossFromTarget(target, commonInputs);
+        inputs.grossMonthly = findGrossFromTarget(target, baseParams);
     } else {
         inputs.grossMonthly = qs('#grossMonthly').value;
     }
@@ -181,107 +181,126 @@ function showPreview() {
     const data = calculateAllFields(inputs);
     const card = qs('#previewCard');
     
-    // Define display order
-    const order = [
-        'Net CTC Yearly', 'Monthly CTC', 'Gross Monthly', 'Net Take-Home (Monthly)',
+    const displayOrder = [
+        'Gross CTC', 'Monthly CTC', 'Net Take-Home (Monthly)', 'Gross Salary Payable',
         'Basic', 'HRA', 'TA', 'Fuel', 'Bonus Amount', 
-        'EPF Employee', 'ESI Employee', 'PT Amount', 'EPF Employer', 'ESI Employer'
+        'EPF Employer', 'EPF Employee', 'ESI Employer', 'ESI Employee', 
+        'PT Amount', 'EDLi', 'Admin'
     ];
 
-    card.innerHTML = order.map(key => `
-        <div class="p-3 bg-slate-50 rounded border ${key.includes('Net CTC') ? 'bg-indigo-50 border-indigo-200' : 'border-transparent'}">
-            <div class="text-xs text-slate-500">${key}</div>
-            <div class="font-medium ${key.includes('Net CTC') ? 'text-indigo-700 font-bold' : ''}">${currency(data[key])}</div>
+    let html = `
+        <div class="col-span-full p-4 rounded-xl bg-indigo-50 border-2 border-indigo-200 text-center mb-2 shadow-sm">
+            <div class="text-indigo-600 text-sm font-bold uppercase tracking-wider">Net CTC Yearly</div>
+            <div class="font-extrabold text-4xl text-indigo-900 mt-1">${currency(data['Net CTC Yearly'])}</div>
+        </div>
+    `;
+
+    html += displayOrder.map(key => `
+        <div class="p-3 bg-white border border-slate-100 rounded-lg shadow-sm hover:border-indigo-100 transition-colors">
+            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">${key}</div>
+            <div class="font-bold text-slate-800 text-lg mt-0.5">${currency(data[key])}</div>
         </div>
     `).join('');
 
+    card.innerHTML = html;
     isCalculated = true;
-    updateButtonState();
+    qs('#addBtn').disabled = false;
     return data;
 }
 
-// PT Toggle
+// Event Listeners
 qs('#ptCheck').addEventListener('change', e => {
     qs('#ptAmountWrap').style.display = e.target.checked ? 'block' : 'none';
     isCalculated = false;
-    updateButtonState();
+    qs('#addBtn').disabled = true;
 });
 
-// Reset preview on input change
 qs('#empForm').addEventListener('input', (e) => {
     if(e.target.id !== 'calcPreview') {
         isCalculated = false;
-        updateButtonState();
+        qs('#addBtn').disabled = true;
     }
 });
 
-qs('input[name="calcMode"]').parentElement.parentElement.addEventListener('change', (e) => {
-    qs('#monthlyInputWrap').style.display = qs('input[name="calcMode"]:checked').value === 'monthly' ? 'block' : 'none';
-    qs('#yearlyInputWrap').style.display = qs('input[name="calcMode"]:checked').value === 'yearly' ? 'block' : 'none';
+document.querySelectorAll('input[name="calcMode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        const mode = qs('input[name="calcMode"]:checked').value;
+        qs('#monthlyInputWrap').style.display = mode === 'monthly' ? 'block' : 'none';
+        qs('#yearlyInputWrap').style.display = mode === 'yearly' ? 'block' : 'none';
+        isCalculated = false;
+        qs('#addBtn').disabled = true;
+    });
 });
 
 qs('#calcPreview').addEventListener('click', showPreview);
 
-// --- SUBMISSION ---
+// --- API SUBMISSION ---
 qs('#empForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!isCalculated) return;
 
     const btn = qs('#addBtn');
-    btn.textContent = 'Sending...';
+    btn.textContent = 'Saving...';
     btn.disabled = true;
 
-    const data = showPreview(); // Re-run to get latest data
+    const calcResults = showPreview();
     const payload = {
         'Emp ID': qs('#empId').value,
         'Name': qs('#name').value,
-        ...data
+        ...calcResults
     };
 
     try {
         await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // Crucial for Google Apps Script redirects
+            mode: 'no-cors',
             body: JSON.stringify(payload)
         });
-        alert('Employee data saved to Google Sheet!');
+        alert('Data successfully saved to Google Sheets!');
         e.target.reset();
         isCalculated = false;
-        updateButtonState();
-        qs('#previewCard').innerHTML = '<div class="text-slate-400 italic">Enter details and click "Preview" to enable adding...</div>';
+        qs('#addBtn').disabled = true;
+        qs('#previewCard').innerHTML = '<div class="col-span-full text-center py-12 text-slate-400 italic">Saved! Add next employee details...</div>';
         fetchList();
     } catch (err) {
-        alert('Failed to save data: ' + err.message);
+        alert('Save Failed: ' + err.message);
+        btn.disabled = false;
     } finally {
         btn.textContent = 'Add to Sheet';
     }
 });
 
-// --- GOOGLE SHEETS LIST ---
+// --- GOOGLE SHEETS SYNC ---
 async function fetchList() {
+    qs('#statusIndicator').textContent = 'Syncing...';
     try {
         const res = await fetch(`${APPS_SCRIPT_URL}?action=get`);
-        const j = await res.json();
-        if (j.status === 'ok') renderTable(j.rows);
+        const json = await res.json();
+        if (json.status === 'ok') {
+            renderTable(json.rows);
+            qs('#statusIndicator').textContent = 'Connected to Google Sheets';
+            qs('#statusIndicator').className = 'text-sm text-green-600 font-medium';
+        }
     } catch (e) {
-        console.error("List fetch error:", e);
+        qs('#statusIndicator').textContent = 'Connection Error';
+        qs('#statusIndicator').className = 'text-sm text-red-600 font-medium';
     }
 }
 
 function renderTable(rows) {
     if (!rows || rows.length === 0) return;
     const headers = Object.keys(rows[0]);
-    qs('#tableHead').innerHTML = headers.map(h => `<th class="px-3 py-2 text-left text-xs font-bold uppercase tracking-wider">${h}</th>`).join('');
+    qs('#tableHead').innerHTML = headers.map(h => `<th class="px-4 py-3 text-left whitespace-nowrap">${h}</th>`).join('');
     qs('#tableBody').innerHTML = rows.map(r => `
-        <tr class="border-t hover:bg-slate-50 transition-colors">
-            ${headers.map(h => `<td class="px-3 py-2 whitespace-nowrap">${typeof r[h] === 'number' ? currency(r[h]) : r[h]}</td>`).join('')}
+        <tr class="hover:bg-indigo-50/50 transition-colors">
+            ${headers.map(h => `<td class="px-4 py-3 whitespace-nowrap border-b border-slate-50">${typeof r[h] === 'number' ? currency(r[h]) : r[h]}</td>`).join('')}
         </tr>
     `).join('');
 }
 
 qs('#refresh').addEventListener('click', fetchList);
 window.onload = () => {
-    updateButtonState();
+    qs('#addBtn').disabled = true;
     fetchList();
 };
 </script>
