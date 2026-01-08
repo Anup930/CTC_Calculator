@@ -91,12 +91,30 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxpVyeLn1lfgqTl
 const qs = sel => document.querySelector(sel);
 const currency = x => (x === '-' || isNaN(x)) ? '-' : '₹' + Number(x).toLocaleString('en-IN');
 
-// Logic Functions
+// Track if calculation has been performed
+let isCalculated = false;
+
+// 1. Improved Calculation Logic (Includes Reverse Search for Yearly CTC)
 function calculate(inputs) {
-    let { grossMonthly, epf, bonusChecked, fuelChecked, ptChecked, ptMonthlyAmount } = inputs;
-    grossMonthly = Number(grossMonthly) || 0;
+    let { mode, value, epf, bonusChecked, fuelChecked, ptChecked, ptMonthlyAmount } = inputs;
     
-    let basic = Math.round(grossMonthly * 0.5), hra = Math.round(grossMonthly * 0.35), ta = Math.round(grossMonthly * 0.15);
+    let grossMonthly = 0;
+    
+    if (mode === 'yearly') {
+        // Simple reverse calculation for the preview
+        // Total Yearly CTC = (Monthly Gross + Fuel + EPF Employer) * 12 + Bonus
+        let target = Number(value) || 0;
+        let fuelEstimate = fuelChecked ? 7500 : 0; // Simplified for reverse logic
+        let epfFactor = epf ? 0.06 : 0; // Estimate: 12% of 50% basic
+        
+        grossMonthly = Math.round((target / (12 * (1 + epfFactor))) - fuelEstimate);
+    } else {
+        grossMonthly = Number(value) || 0;
+    }
+
+    let basic = Math.round(grossMonthly * 0.5);
+    let hra = Math.round(grossMonthly * 0.35);
+    let ta = Math.round(grossMonthly * 0.15);
     let fuel = fuelChecked ? (grossMonthly >= 50000 ? 7500 : Math.round(grossMonthly * 0.15)) : 0;
     let bonus = bonusChecked ? grossMonthly : 0;
     
@@ -109,35 +127,124 @@ function calculate(inputs) {
     let takeHome = (basic + hra + ta + fuel) - (epfEmp + pt);
 
     return {
-        'Emp ID': inputs.empId, 'Name': inputs.name, 'Gross Monthly': grossMonthly,
-        'Net CTC Yearly': netYearly, 'Monthly CTC': monthlyCTC, 'Net Take-Home (Monthly)': takeHome,
-        'Basic': basic, 'HRA': hra, 'TA': ta, 'Fuel': fuel, 'Bonus Amount': bonus,
-        'EPF Employee': epfEmp, 'EPF Employer': epfCompany, 'PT Amount': pt
+        'Gross Monthly': grossMonthly, 'Net CTC Yearly': netYearly, 
+        'Monthly CTC': monthlyCTC, 'Net Take-Home (Monthly)': takeHome,
+        'Basic': basic, 'HRA': hra, 'TA': ta, 'Fuel': fuel, 
+        'Bonus Amount': bonus, 'EPF Employee': epfEmp, 
+        'EPF Employer': epfCompany, 'PT Amount': pt
     };
 }
 
-// UI Handling
+// 2. Function to Update Preview UI
+function showPreview() {
+    const mode = qs('input[name="calcMode"]:checked').value;
+    const val = mode === 'monthly' ? qs('#grossMonthly').value : qs('#yearlyCtc').value;
+    
+    if (!val) {
+        alert("Please enter a salary amount first.");
+        return;
+    }
+
+    const calcData = calculate({
+        mode: mode,
+        value: val,
+        epf: qs('#epf').checked,
+        bonusChecked: qs('#bonusCheck').checked,
+        fuelChecked: qs('#fuelCheck').checked,
+        ptChecked: qs('#ptCheck').checked,
+        ptMonthlyAmount: qs('#ptMonthlyAmount').value
+    });
+
+    const previewCard = qs('#previewCard');
+    previewCard.innerHTML = Object.entries(calcData).map(([key, value]) => `
+        <div class="p-3 bg-slate-50 rounded">
+            <div class="text-xs text-slate-500">${key}</div>
+            <div class="font-medium">${typeof value === 'number' ? currency(value) : value}</div>
+        </div>
+    `).join('');
+
+    // Enable the "Add to Sheet" button now that preview is generated
+    isCalculated = true;
+    updateButtonState();
+}
+
+// 3. Manage "Add to Sheet" Button State
+function updateButtonState() {
+    const addBtn = qs('#addBtn');
+    addBtn.disabled = !isCalculated;
+}
+
+// 4. Listeners
+qs('#calcPreview').addEventListener('click', showPreview);
+
+// Disable add button if any input changes (requiring a new preview)
+qs('#empForm').addEventListener('input', () => {
+    isCalculated = false;
+    updateButtonState();
+});
+
+// PT Toggle
 qs('#ptCheck').addEventListener('change', e => qs('#ptAmountWrap').style.display = e.target.checked ? 'block' : 'none');
+
+// Mode Switch
 document.querySelectorAll('input[name="calcMode"]').forEach(r => {
     r.addEventListener('change', function() {
         qs('#monthlyInputWrap').style.display = this.value === 'monthly' ? 'block' : 'none';
         qs('#yearlyInputWrap').style.display = this.value === 'yearly' ? 'block' : 'none';
+        isCalculated = false;
+        updateButtonState();
     });
 });
 
-// Fetching Data
+// Form Submission
+qs('#empForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!isCalculated) return;
+
+    const btn = qs('#addBtn');
+    btn.disabled = true;
+    btn.textContent = 'Uploading...';
+
+    // Combine Identity Data with Calculated Data
+    const mode = qs('input[name="calcMode"]:checked').value;
+    const val = mode === 'monthly' ? qs('#grossMonthly').value : qs('#yearlyCtc').value;
+    const finalCalc = calculate({
+        mode: mode, value: val, epf: qs('#epf').checked,
+        bonusChecked: qs('#bonusCheck').checked, fuelChecked: qs('#fuelCheck').checked,
+        ptChecked: qs('#ptCheck').checked, ptMonthlyAmount: qs('#ptMonthlyAmount').value
+    });
+
+    const payload = {
+        'Emp ID': qs('#empId').value,
+        'Name': qs('#name').value,
+        ...finalCalc
+    };
+
+    try {
+        await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify(payload)
+        });
+        alert('Employee Added Successfully!');
+        e.target.reset();
+        isCalculated = false;
+        updateButtonState();
+        qs('#previewCard').innerHTML = '<div class="text-slate-400 italic">Fill details to see calculation...</div>';
+    } catch (err) {
+        alert('Error: ' + err.message);
+    } finally {
+        btn.textContent = 'Add to Sheet';
+    }
+});
+
+// Database Fetching
 async function fetchList() {
-    qs('#statusIndicator').textContent = 'Syncing...';
     try {
         const res = await fetch(`${APPS_SCRIPT_URL}?action=get`);
         const data = await res.json();
         renderTable(data.rows);
-        qs('#statusIndicator').textContent = 'Connected to Google Sheets';
-        qs('#statusIndicator').className = 'text-sm text-green-600';
-    } catch (e) {
-        qs('#statusIndicator').textContent = 'Offline / URL Error';
-        qs('#statusIndicator').className = 'text-sm text-red-600';
-    }
+    } catch (e) { console.error("Fetch failed", e); }
 }
 
 function renderTable(rows) {
@@ -151,43 +258,14 @@ function renderTable(rows) {
     `).join('');
 }
 
-// Form Submission
-qs('#empForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = qs('#addBtn');
-    btn.disabled = true;
-    btn.textContent = 'Uploading...';
-
-    const calcData = calculate({
-        empId: qs('#empId').value,
-        name: qs('#name').value,
-        grossMonthly: qs('#grossMonthly').value,
-        epf: qs('#epf').checked,
-        bonusChecked: qs('#bonusCheck').checked,
-        fuelChecked: qs('#fuelCheck').checked,
-        ptChecked: qs('#ptCheck').checked,
-        ptMonthlyAmount: qs('#ptMonthlyAmount').value
-    });
-
-    try {
-        await fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors', // Essential for GitHub -> Google communication
-            body: JSON.stringify(calcData)
-        });
-        alert('Data sent! Please wait a few seconds and Refresh List.');
-        e.target.reset();
-        fetchList();
-    } catch (err) {
-        alert('Error: ' + err.message);
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Add to Sheet';
-    }
-});
-
 qs('#refresh').addEventListener('click', fetchList);
-window.onload = fetchList;
+window.onload = () => {
+    updateButtonState();
+    fetchList();
+};
+
+
+  
 </script>
 </body>
 </html>
