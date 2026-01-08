@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Payroll Pro — Advanced Dynamic Dashboard</title>
+  <title>Payroll Pro — Enterprise CTC Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -59,10 +59,10 @@
           <div class="p-6 bg-slate-50 border-b border-slate-200"><h3 class="font-bold text-slate-800">Parameters</h3></div>
           <form id="empForm" class="p-6 space-y-5">
             <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
-              <label class="flex items-center justify-center gap-2 py-2 rounded-lg cursor-pointer text-xs font-bold has-[:checked]:bg-white has-[:checked]:shadow-sm has-[:checked]:text-indigo-600">
+              <label class="flex items-center justify-center gap-2 py-2 rounded-lg cursor-pointer text-xs font-bold transition-all has-[:checked]:bg-white has-[:checked]:shadow-sm has-[:checked]:text-indigo-600">
                 <input type="radio" name="calcMode" value="monthly" checked class="hidden"> Monthly Gross
               </label>
-              <label class="flex items-center justify-center gap-2 py-2 rounded-lg cursor-pointer text-xs font-bold has-[:checked]:bg-white has-[:checked]:shadow-sm has-[:checked]:text-indigo-600">
+              <label class="flex items-center justify-center gap-2 py-2 rounded-lg cursor-pointer text-xs font-bold transition-all has-[:checked]:bg-white has-[:checked]:shadow-sm has-[:checked]:text-indigo-600">
                 <input type="radio" name="calcMode" value="yearly" class="hidden"> Yearly CTC
               </label>
             </div>
@@ -95,14 +95,18 @@
 
             <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
                 <div class="flex items-center justify-between">
-                    <label class="flex items-center gap-2 text-xs font-bold text-slate-600"><input id="epfCheck" type="checkbox" checked class="w-4 h-4 accent-indigo-600"> EPF</label>
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-600">
+                      <input id="epfCheck" type="checkbox" class="w-4 h-4 accent-indigo-600"> EPF
+                    </label>
                     <div id="epfConfig" class="flex items-center gap-1 hidden">
-                        <input id="epfVal" type="number" placeholder="Amt" class="w-16 p-1 text-[10px] border rounded bg-white font-bold" title="Enter manual EPF amount if not default">
+                        <input id="epfVal" type="number" placeholder="Amt" class="w-16 p-1 text-[10px] border rounded bg-white font-bold">
                         <span class="text-[8px] text-slate-400 font-bold uppercase">Man</span>
                     </div>
                 </div>
                 <div class="flex items-center justify-between">
-                    <label class="flex items-center gap-2 text-xs font-bold text-slate-600"><input id="ptCheck" type="checkbox" checked class="w-4 h-4 accent-indigo-600"> PT (Professional Tax)</label>
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-600">
+                      <input id="ptCheck" type="checkbox" class="w-4 h-4 accent-indigo-600"> PT (Professional Tax)
+                    </label>
                     <div id="ptConfig" class="flex items-center gap-1 hidden">
                         <input id="ptVal" type="number" value="200" class="w-16 p-1 text-[10px] border rounded bg-white font-bold">
                         <span class="text-[8px] text-slate-400 font-bold uppercase">Man</span>
@@ -201,7 +205,6 @@ function calculateAllFields(inputs) {
     let fuel = fuelCheck ? (grossMonthly >= 50000 ? 7500 : Math.round(grossMonthly * 0.15)) : 0;
     let bonus = bonusCheck ? grossMonthly : 0;
     
-    // EPF Logic: Default or Manual
     let epfEmp = 0, epfEmployer = 0;
     if(epfCheck) {
         if(epfManualVal > 0) {
@@ -218,7 +221,6 @@ function calculateAllFields(inputs) {
     let esiEmployee = isEsi ? Math.round(grossMonthly * 0.0075) : 0;
     let esiEmployer = isEsi ? Math.round(grossMonthly * 0.0325) : 0;
     
-    // PT Logic: Default or Manual
     let pt = ptCheck ? (Number(ptManualVal) || 200) : 0;
 
     let monthlyEmployerContributions = epfEmployer + esiEmployer + edli + admin;
@@ -353,7 +355,15 @@ async function fetchList() {
 }
 
 qs('#refresh').addEventListener('click', fetchList);
-window.onload = fetchList;
+
+// Forced uncheck and configuration hide on initial window load
+window.onload = () => {
+    qs('#epfCheck').checked = false;
+    qs('#ptCheck').checked = false;
+    qs('#epfConfig').classList.add('hidden');
+    qs('#ptConfig').classList.add('hidden');
+    fetchList();
+};
 </script>
 </body>
 </html>
