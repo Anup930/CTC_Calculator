@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Payroll Pro — Sidebar Control Edition</title>
+  <title>Payroll Pro — PDF Export Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; }
     .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
@@ -32,7 +33,7 @@
       </button>
 
       <button onclick="setMode('yearly')" id="sideYearly" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition-all font-bold text-sm">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z"></path></svg>
         <span>Add (Yearly)</span>
       </button>
 
@@ -42,18 +43,15 @@
       </button>
     </nav>
 
-    <div class="p-4 border-t border-slate-100">
-      <div id="statusIndicator" class="flex items-center gap-2 text-[10px] font-extrabold text-green-600 uppercase tracking-widest">
-        <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
+    <div class="p-4 border-t border-slate-100 text-[10px] font-extrabold text-green-600 uppercase text-center">
         System Active
-      </div>
     </div>
   </aside>
 
   <div class="lg:ml-64 min-h-screen flex flex-col">
     <header class="sticky top-0 z-40 h-16 glass border-b border-slate-200 px-8 flex items-center justify-between">
       <h2 id="pageTitle" class="font-bold text-slate-700 tracking-tight text-lg">Monthly Gross Calculator</h2>
-      <button id="refresh" class="text-xs font-extrabold text-indigo-600 hover:text-indigo-800 uppercase tracking-widest transition-colors">Refresh Data</button>
+      <button id="refresh" class="text-xs font-extrabold text-indigo-600 hover:text-indigo-800 uppercase tracking-widest transition-colors">Refresh Feed</button>
     </header>
 
     <main class="p-8">
@@ -111,7 +109,15 @@
         </section>
 
         <section class="xl:col-span-8 space-y-6">
-          <div id="previewCard" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="flex justify-between items-center px-2">
+            <h3 class="font-bold text-slate-400 text-[10px] uppercase tracking-[0.2em]">Breakdown Preview</h3>
+            <button id="downloadPdf" class="hidden text-xs font-bold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-full hover:bg-indigo-100 transition-all flex items-center gap-2">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Download PDF
+            </button>
+          </div>
+          
+          <div id="previewCard" class="grid grid-cols-1 md:grid-cols-3 gap-4 p-2 bg-slate-50/50 rounded-3xl min-h-[400px]">
              <div class="col-span-full py-32 flex flex-col items-center justify-center text-slate-300 border-2 border-dashed border-slate-200 rounded-3xl uppercase tracking-widest text-[10px] font-bold">Select mode from sidebar & calculate</div>
           </div>
         </section>
@@ -119,7 +125,7 @@
 
       <div id="dbPage" class="hidden animate-fadeIn">
         <section class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <div class="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Master Database</h3>
           </div>
           <div class="overflow-x-auto custom-scroll">
@@ -148,28 +154,20 @@ const currency = x => isNaN(x) ? '₹0' : '₹' + Math.round(x).toLocaleString('
 let activeMode = 'monthly';
 let isCalculated = false;
 
-// --- SIDEBAR PAGE/MODE CONTROL ---
+// --- PAGE CONTROL ---
 function setMode(mode) {
     activeMode = mode;
-    // Show Calculator Page
     qs('#calcPage').classList.remove('hidden');
     qs('#dbPage').classList.add('hidden');
-    
-    // Toggle Inputs
     qs('#monthlyInputWrap').style.display = mode === 'monthly' ? 'block' : 'none';
     qs('#yearlyInputWrap').style.display = mode === 'yearly' ? 'block' : 'none';
-    
-    // Update Header
     qs('#pageTitle').innerText = mode === 'monthly' ? "Monthly Gross Calculator" : "Yearly CTC Calculator";
-
-    // Update Sidebar CSS
     qs('#sideMonthly').classList.toggle('active', mode === 'monthly');
     qs('#sideMonthly').classList.toggle('text-slate-500', mode !== 'monthly');
     qs('#sideYearly').classList.toggle('active', mode === 'yearly');
     qs('#sideYearly').classList.toggle('text-slate-500', mode !== 'yearly');
     qs('#sideDb').classList.remove('active');
     qs('#sideDb').classList.add('text-slate-500');
-
     resetCalc();
 }
 
@@ -177,20 +175,23 @@ function showDatabase() {
     qs('#calcPage').classList.add('hidden');
     qs('#dbPage').classList.remove('hidden');
     qs('#pageTitle').innerText = "Employee Database";
-    
     qs('#sideDb').classList.add('active');
     qs('#sideDb').classList.remove('text-slate-500');
     qs('#sideMonthly').classList.remove('active');
     qs('#sideMonthly').classList.add('text-slate-500');
     qs('#sideYearly').classList.remove('active');
     qs('#sideYearly').classList.add('text-slate-500');
-    
     fetchList();
 }
 
-function resetCalc() { isCalculated = false; qs('#addBtn').disabled = true; qs('#previewCard').innerHTML = ''; }
+function resetCalc() { 
+    isCalculated = false; 
+    qs('#addBtn').disabled = true; 
+    qs('#previewCard').innerHTML = ''; 
+    qs('#downloadPdf').classList.add('hidden');
+}
 
-// --- CORE PAYROLL CALCULATION (Exact as before) ---
+// --- CALCULATION LOGIC ---
 function calculateAllFields(inputs) {
     let { grossMonthly, manualMode, manualBasic, manualHra, manualTA, epfCheck, epfManualVal, bonusCheck, fuelCheck, ptCheck, ptManualVal } = inputs;
     let basic = manualMode ? (Number(manualBasic) || 0) : Math.round(grossMonthly * 0.5);
@@ -222,10 +223,37 @@ function showPreview() {
     let gross = activeMode === 'yearly' ? findGrossFromTarget(Number(qs('#yearlyCtc').value), base) : Number(qs('#grossMonthly').value);
     const data = calculateAllFields({...base, grossMonthly: gross});
     const card = qs('#previewCard');
-    card.innerHTML = `<div class="col-span-full bg-indigo-600 rounded-3xl p-8 text-white flex justify-between items-center shadow-xl"><div><p class="text-[10px] uppercase font-bold text-indigo-200">Yearly CTC</p><h4 class="text-4xl font-black">${currency(data['Net CTC Yearly'])}</h4></div><div class="text-right"><p class="text-[10px] uppercase font-bold text-indigo-200">Monthly In-Hand</p><h4 class="text-2xl font-bold">${currency(data['In-Hand Salary'])}</h4></div></div>` + 
-    Object.entries(data).map(([k,v]) => `<div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm"><p class="text-[9px] font-extrabold uppercase text-slate-400 tracking-widest">${k}</p><p class="text-lg font-bold text-slate-800 mt-1">${currency(v)}</p></div>`).join('');
-    isCalculated = true; qs('#addBtn').disabled = false;
+
+    card.innerHTML = `
+        <div class="col-span-full bg-indigo-600 rounded-3xl p-8 text-white flex justify-between items-center shadow-xl">
+            <div><p class="text-[10px] uppercase font-bold text-indigo-200">Yearly CTC</p><h4 class="text-4xl font-black">${currency(data['Net CTC Yearly'])}</h4></div>
+            <div class="text-right"><p class="text-[10px] uppercase font-bold text-indigo-200">Monthly In-Hand</p><h4 class="text-2xl font-bold">${currency(data['In-Hand Salary'])}</h4></div>
+        </div>
+        ${Object.entries(data).map(([k,v]) => `
+            <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                <p class="text-[9px] font-extrabold uppercase text-slate-400 tracking-widest">${k}</p>
+                <p class="text-lg font-bold text-slate-800 mt-1">${currency(v)}</p>
+            </div>
+        `).join('')}
+    `;
+    isCalculated = true; 
+    qs('#addBtn').disabled = false;
+    qs('#downloadPdf').classList.remove('hidden');
 }
+
+// --- PDF DOWNLOAD LOGIC ---
+qs('#downloadPdf').addEventListener('click', () => {
+    const element = qs('#previewCard');
+    const empName = qs('#name').value || 'Employee';
+    const opt = {
+        margin: 1,
+        filename: `${empName}_Payroll_Breakdown.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+    };
+    html2pdf().from(element).set(opt).save();
+});
 
 // --- API & LISTENERS ---
 qs('#calcPreview').addEventListener('click', showPreview);
