@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CTC Calculator — Hosted on GitHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <div class="max-w-6xl mx-auto p-6">
+    <header class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-semibold">Employee CTC Calculator</h1>
+      <div id="statusIndicator" class="text-sm text-amber-600">Checking connection...</div>
+    </header>
+
+    <main class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <section class="col-span-1 bg-white p-5 rounded-2xl shadow">
+        <h2 class="font-medium mb-3">Add Employee</h2>
+        <form id="empForm" class="space-y-4">
+          <div class="p-3 bg-slate-100 rounded-lg">
+            <label class="block text-sm font-medium mb-2">Calculation Mode</label>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-2"><input type="radio" name="calcMode" value="monthly" checked> <span>Monthly Gross</span></label>
+              <label class="flex items-center gap-2"><input type="radio" name="calcMode" value="yearly"> <span>Yearly CTC</span></label>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm">Employee ID</label>
+            <input id="empId" required class="w-full p-2 border rounded" />
+          </div>
+          <div>
+            <label class="block text-sm">Name</label>
+            <input id="name" required class="w-full p-2 border rounded" />
+          </div>
+
+          <div id="monthlyInputWrap">
+            <label class="block text-sm">Gross Monthly (₹)</label>
+            <input id="grossMonthly" type="number" class="w-full p-2 border rounded" />
+          </div>
+          <div id="yearlyInputWrap" style="display:none;">
+            <label class="block text-sm">Net CTC Yearly (₹)</label>
+            <input id="yearlyCtc" type="number" class="w-full p-2 border rounded" />
+          </div>
+          
+          <div class="flex items-center gap-4 flex-wrap pt-2">
+            <label class="flex items-center gap-2"><input id="epf" type="checkbox"> <span>EPF</span></label>
+            <label class="flex items-center gap-2"><input id="bonusCheck" type="checkbox"> <span>Bonus</span></label>
+            <label class="flex items-center gap-2"><input id="fuelCheck" type="checkbox"> <span>Fuel</span></label>
+            <label class="flex items-center gap-2"><input id="ptCheck" type="checkbox"> <span>PT</span></label>
+          </div>
+
+          <div id="ptAmountWrap" style="display:none;" class="pl-4 border-l-2">
+            <label class="block text-xs font-medium">Monthly PT Amount (₹)</label>
+            <input id="ptMonthlyAmount" type="number" value="200" class="w-full p-1 border rounded text-sm" />
+          </div>
+
+          <div class="flex gap-2 pt-4">
+            <button type="submit" id="addBtn" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-slate-400">Add to Sheet</button>
+            <button type="button" id="calcPreview" class="px-4 py-2 bg-slate-200 rounded">Preview</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="col-span-1 md:col-span-2 bg-white p-5 rounded-2xl shadow">
+        <h2 class="font-medium mb-3">Breakdown Preview</h2>
+        <div id="previewCard" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="text-slate-400 italic">Fill details to see calculation...</div>
+        </div>
+      </section>
+    </main>
+
+    <section class="mt-6 bg-white p-5 rounded-2xl shadow">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-medium">Database (Google Sheets)</h3>
+        <button id="refresh" class="text-sm text-indigo-600 font-medium">Refresh List</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600"><tr id="tableHead"></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+<script>
+// REPLACE THIS URL WITH YOUR DEPLOYED GOOGLE APPS SCRIPT URL
+const APPS_SCRIPT_URL = 'YOUR_DEPLOYED_WEB_APP_URL';
+
+const qs = sel => document.querySelector(sel);
+const currency = x => (x === '-' || isNaN(x)) ? '-' : '₹' + Number(x).toLocaleString('en-IN');
+
+// Logic Functions
+function calculate(inputs) {
+    let { grossMonthly, epf, bonusChecked, fuelChecked, ptChecked, ptMonthlyAmount } = inputs;
+    grossMonthly = Number(grossMonthly) || 0;
+    
+    let basic = Math.round(grossMonthly * 0.5), hra = Math.round(grossMonthly * 0.35), ta = Math.round(grossMonthly * 0.15);
+    let fuel = fuelChecked ? (grossMonthly >= 50000 ? 7500 : Math.round(grossMonthly * 0.15)) : 0;
+    let bonus = bonusChecked ? grossMonthly : 0;
+    
+    let epfEmp = epf ? Math.min(Math.round(basic * 0.12), 1800) : 0;
+    let epfCompany = epf ? Math.min(Math.round(basic * 0.12), 1800) : 0;
+    let pt = ptChecked ? (Number(ptMonthlyAmount) || 0) : 0;
+
+    let monthlyCTC = grossMonthly + fuel + epfCompany;
+    let netYearly = (monthlyCTC * 12) + bonus;
+    let takeHome = (basic + hra + ta + fuel) - (epfEmp + pt);
+
+    return {
+        'Emp ID': inputs.empId, 'Name': inputs.name, 'Gross Monthly': grossMonthly,
+        'Net CTC Yearly': netYearly, 'Monthly CTC': monthlyCTC, 'Net Take-Home (Monthly)': takeHome,
+        'Basic': basic, 'HRA': hra, 'TA': ta, 'Fuel': fuel, 'Bonus Amount': bonus,
+        'EPF Employee': epfEmp, 'EPF Employer': epfCompany, 'PT Amount': pt
+    };
+}
+
+// UI Handling
+qs('#ptCheck').addEventListener('change', e => qs('#ptAmountWrap').style.display = e.target.checked ? 'block' : 'none');
+document.querySelectorAll('input[name="calcMode"]').forEach(r => {
+    r.addEventListener('change', function() {
+        qs('#monthlyInputWrap').style.display = this.value === 'monthly' ? 'block' : 'none';
+        qs('#yearlyInputWrap').style.display = this.value === 'yearly' ? 'block' : 'none';
+    });
+});
+
+// Fetching Data
+async function fetchList() {
+    qs('#statusIndicator').textContent = 'Syncing...';
+    try {
+        const res = await fetch(`${APPS_SCRIPT_URL}?action=get`);
+        const data = await res.json();
+        renderTable(data.rows);
+        qs('#statusIndicator').textContent = 'Connected to Google Sheets';
+        qs('#statusIndicator').className = 'text-sm text-green-600';
+    } catch (e) {
+        qs('#statusIndicator').textContent = 'Offline / URL Error';
+        qs('#statusIndicator').className = 'text-sm text-red-600';
+    }
+}
+
+function renderTable(rows) {
+    if (!rows || rows.length === 0) return;
+    const headers = Object.keys(rows[0]);
+    qs('#tableHead').innerHTML = headers.map(h => `<th class="px-3 py-2 text-left">${h}</th>`).join('');
+    qs('#tableBody').innerHTML = rows.map(r => `
+        <tr class="border-t hover:bg-slate-50">
+            ${headers.map(h => `<td class="px-3 py-2">${typeof r[h] === 'number' ? currency(r[h]) : r[h]}</td>`).join('')}
+        </tr>
+    `).join('');
+}
+
+// Form Submission
+qs('#empForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = qs('#addBtn');
+    btn.disabled = true;
+    btn.textContent = 'Uploading...';
+
+    const calcData = calculate({
+        empId: qs('#empId').value,
+        name: qs('#name').value,
+        grossMonthly: qs('#grossMonthly').value,
+        epf: qs('#epf').checked,
+        bonusChecked: qs('#bonusCheck').checked,
+        fuelChecked: qs('#fuelCheck').checked,
+        ptChecked: qs('#ptCheck').checked,
+        ptMonthlyAmount: qs('#ptMonthlyAmount').value
+    });
+
+    try {
+        await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Essential for GitHub -> Google communication
+            body: JSON.stringify(calcData)
+        });
+        alert('Data sent! Please wait a few seconds and Refresh List.');
+        e.target.reset();
+        fetchList();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Add to Sheet';
+    }
+});
+
+qs('#refresh').addEventListener('click', fetchList);
+window.onload = fetchList;
+</script>
+</body>
+</html>
