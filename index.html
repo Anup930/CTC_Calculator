@@ -135,38 +135,38 @@ function calculate(inputs) {
     };
 }
 
-// 2. Function to Update Preview UI
-function showPreview() {
-    const mode = qs('input[name="calcMode"]:checked').value;
-    const val = mode === 'monthly' ? qs('#grossMonthly').value : qs('#yearlyCtc').value;
+// // 2. Function to Update Preview UI
+// function showPreview() {
+//     const mode = qs('input[name="calcMode"]:checked').value;
+//     const val = mode === 'monthly' ? qs('#grossMonthly').value : qs('#yearlyCtc').value;
     
-    if (!val) {
-        alert("Please enter a salary amount first.");
-        return;
-    }
+//     if (!val) {
+//         alert("Please enter a salary amount first.");
+//         return;
+//     }
 
-    const calcData = calculate({
-        mode: mode,
-        value: val,
-        epf: qs('#epf').checked,
-        bonusChecked: qs('#bonusCheck').checked,
-        fuelChecked: qs('#fuelCheck').checked,
-        ptChecked: qs('#ptCheck').checked,
-        ptMonthlyAmount: qs('#ptMonthlyAmount').value
-    });
+//     const calcData = calculate({
+//         mode: mode,
+//         value: val,
+//         epf: qs('#epf').checked,
+//         bonusChecked: qs('#bonusCheck').checked,
+//         fuelChecked: qs('#fuelCheck').checked,
+//         ptChecked: qs('#ptCheck').checked,
+//         ptMonthlyAmount: qs('#ptMonthlyAmount').value
+//     });
 
-    const previewCard = qs('#previewCard');
-    previewCard.innerHTML = Object.entries(calcData).map(([key, value]) => `
-        <div class="p-3 bg-slate-50 rounded">
-            <div class="text-xs text-slate-500">${key}</div>
-            <div class="font-medium">${typeof value === 'number' ? currency(value) : value}</div>
-        </div>
-    `).join('');
+//     const previewCard = qs('#previewCard');
+//     previewCard.innerHTML = Object.entries(calcData).map(([key, value]) => `
+//         <div class="p-3 bg-slate-50 rounded">
+//             <div class="text-xs text-slate-500">${key}</div>
+//             <div class="font-medium">${typeof value === 'number' ? currency(value) : value}</div>
+//         </div>
+//     `).join('');
 
-    // Enable the "Add to Sheet" button now that preview is generated
-    isCalculated = true;
-    updateButtonState();
-}
+//     // Enable the "Add to Sheet" button now that preview is generated
+//     isCalculated = true;
+//     updateButtonState();
+// }
 
 // 3. Manage "Add to Sheet" Button State
 function updateButtonState() {
@@ -264,7 +264,99 @@ window.onload = () => {
     fetchList();
 };
 
+// 1. Precise Core Calculation Engine
+function calculateAllFields(inputs) {
+    let { grossMonthly, epf, bonusChecked, fuelChecked, ptChecked, ptMonthlyAmount } = inputs;
+    grossMonthly = Number(grossMonthly) || 0;
+    
+    // Standard Splits
+    let basic = Math.round(grossMonthly * 0.5);
+    let hra = Math.round(grossMonthly * 0.35);
+    let ta = Math.round(grossMonthly * 0.15);
+    
+    // Benefits
+    let fuel = fuelChecked ? (grossMonthly >= 50000 ? 7500 : Math.round(grossMonthly * 0.15)) : 0;
+    let bonus = bonusChecked ? grossMonthly : 0;
+    
+    // Statutory (EPF Restricted Logic)
+    let epfEmp = epf ? Math.min(Math.round(basic * 0.12), 1800) : 0;
+    let epfEmployer = epf ? Math.min(Math.round(basic * 0.12), 1800) : 0;
+    
+    // ESI (Automatic if Gross Monthly <= 21000)
+    let isEsi = grossMonthly <= 21000;
+    let esiEmp = isEsi ? Math.round(grossMonthly * 0.0075) : 0;
+    let esiEmployer = isEsi ? Math.round(grossMonthly * 0.0325) : 0;
+    
+    let pt = ptChecked ? (Number(ptMonthlyAmount) || 0) : 0;
 
+    // Totals
+    let monthlyEmployerContributions = epfEmployer + esiEmployer; 
+    let monthlyCTC = grossMonthly + fuel + monthlyEmployerContributions;
+    let netYearlyCTC = (monthlyCTC * 12) + bonus;
+    
+    let grossSalaryPayable = basic + hra + ta + fuel;
+    let netTakeHome = grossSalaryPayable - (epfEmp + esiEmp + pt);
+
+    return {
+        'Gross Monthly': grossMonthly,
+        'Net CTC Yearly': netYearlyCTC,
+        'Monthly CTC': monthlyCTC,
+        'Net Take-Home (Monthly)': netTakeHome,
+        'Basic': basic, 'HRA': hra, 'TA': ta, 'Fuel': fuel,
+        'Bonus Amount': bonus, 'EPF Employee': epfEmp,
+        'EPF Employer': epfEmployer, 'ESI Employer': esiEmployer,
+        'PT Amount': pt, 'Gross Salary Payable': grossSalaryPayable
+    };
+}
+
+// 2. The Precision "Search" Engine (Finds exact Monthly Gross for a Target CTC)
+function findGrossFromTarget(targetCTC, options) {
+    let low = 0, high = targetCTC, bestGuess = 0;
+    for (let i = 0; i < 40; i++) { // 40 iterations for paise-perfect accuracy
+        let guess = (low + high) / 2;
+        let result = calculateAllFields({ grossMonthly: guess, ...options });
+        if (result['Net CTC Yearly'] < targetCTC) {
+            low = guess;
+        } else {
+            high = guess;
+        }
+        bestGuess = guess;
+    }
+    return bestGuess;
+}
+
+// 3. Updated Show Preview Function
+function showPreview() {
+    const mode = qs('input[name="calcMode"]:checked').value;
+    const epf = qs('#epf').checked;
+    const bonusChecked = qs('#bonusCheck').checked;
+    const fuelChecked = qs('#fuelCheck').checked;
+    const ptChecked = qs('#ptCheck').checked;
+    const ptMonthlyAmount = qs('#ptMonthlyAmount').value;
+
+    let finalInputs = { epf, bonusChecked, fuelChecked, ptChecked, ptMonthlyAmount };
+    
+    if (mode === 'yearly') {
+        const target = Number(qs('#yearlyCtc').value) || 0;
+        finalInputs.grossMonthly = findGrossFromTarget(target, finalInputs);
+    } else {
+        finalInputs.grossMonthly = qs('#grossMonthly').value;
+    }
+
+    const calcData = calculateAllFields(finalInputs);
+
+    // Update UI
+    const previewCard = qs('#previewCard');
+    previewCard.innerHTML = Object.entries(calcData).map(([key, value]) => `
+        <div class="p-3 bg-slate-50 rounded border ${key === 'Net CTC Yearly' ? 'bg-indigo-50 border-indigo-200' : 'border-transparent'}">
+            <div class="text-xs text-slate-500">${key}</div>
+            <div class="font-medium ${key === 'Net CTC Yearly' ? 'text-indigo-700' : ''}">${typeof value === 'number' ? currency(value) : value}</div>
+        </div>
+    `).join('');
+
+    isCalculated = true;
+    updateButtonState();
+}
   
 </script>
 </body>
