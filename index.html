@@ -1,9 +1,11 @@
+<!-- V9.7 -->
+
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Payroll Pro — Complete Master Edition</title>
+  <title>Payroll Pro — Enterprise Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -19,11 +21,11 @@
       max-width: 240px; border: 1px solid #334155; line-height: 1.5;
     }
 
-    /* Fixed PDF Template: Visible but off-screen to ensure it's not blank */
-    #pdfTemplate { position: absolute; left: -5000px; width: 750px; background: white; padding: 40px; color: #000; }
-    .pdf-table { width: 100%; border-collapse: collapse; margin-top: 20px; border: 1px solid #000; }
-    .pdf-table th, .pdf-table td { border: 1px solid #000; padding: 8px; text-align: left; font-size: 11px; }
-    .pdf-header { border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
+    /* PDF Template: hidden from user but accessible to script */
+    #pdfTemplate { display: none; width: 800px; padding: 40px; background: white; color: black; }
+    .pdf-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .pdf-table th, .pdf-table td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 12px; }
+    .pdf-header { border-bottom: 3px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
@@ -35,41 +37,42 @@
 
   <div id="pdfTemplate">
       <div class="pdf-header">
-          <h1 style="font-size: 22px; color: #4f46e5; margin: 0;">Payroll Pro - Official Salary Structure</h1>
-          <p style="margin: 5px 0; font-size: 12px;" id="pdfEmpInfo"></p>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h1 style="font-size: 26px; color: #4f46e5; margin: 0; font-weight: 800;">PAYROLL PRO</h1>
+            <div style="text-align: right;">
+              <p style="margin: 0; font-weight: 800; font-size: 16px;" id="pdfEmpName">-</p>
+              <p style="margin: 0; font-size: 12px; color: #64748b;" id="pdfEmpId">-</p>
+            </div>
+          </div>
+          <p style="margin: 10px 0 0 0; font-size: 11px; color: #64748b;">Generated on: <span id="pdfDate"></span></p>
       </div>
       <table class="pdf-table">
-          <thead style="background: #f1f5f9;">
+          <thead style="background: #f8fafc;">
               <tr>
                   <th style="width: 30%">Component</th>
                   <th style="width: 20%">Monthly Amt</th>
-                  <th style="width: 50%">Calculation Details</th>
+                  <th style="width: 50%">Description & Formula</th>
               </tr>
           </thead>
           <tbody id="pdfRows"></tbody>
       </table>
-      <div style="margin-top: 20px; font-size: 9px; color: #444;">
-          <p>Note: ESI is calculated on Basic + HRA. EPF is capped at ₹1,800.</p>
+      <div style="margin-top: 30px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+          <p>Note: ESI calculated on Basic + HRA. EPF capped at ₹1,800. This is an official salary breakdown document.</p>
       </div>
   </div>
 
   <aside class="fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 hidden lg:flex flex-col z-50">
-    <div class="p-6">
-      <div class="flex items-center gap-3 text-indigo-600 font-bold text-xl">
-        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-xs shadow-lg font-black">PP</div>
-        Payroll Pro
-      </div>
-    </div>
+    <div class="p-6"><div class="flex items-center gap-3 text-indigo-600 font-bold text-xl"><div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-xs shadow-lg font-black">PP</div>Payroll Pro</div></div>
     <nav class="flex-1 px-4 space-y-2">
       <button onclick="setMode('monthly')" id="sideMonthly" class="nav-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m.599-1c.51-.598.81-1.364.81-2.201 0-1.546-1.043-2.846-2.45-3.203M12 16c-1.11 0-2.08-.402-2.599-1M12 16V15m0 1v-8" stroke-width="2"></path></svg>
         <span>Add (Monthly)</span>
       </button>
-      <button onclick="setMode('yearly')" id="sideYearly" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition-all font-bold text-sm">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2"></path></svg>
+      <button onclick="setMode('yearly')" id="sideYearly" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 font-bold text-sm">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z" stroke-width="2"></path></svg>
         <span>Add (Yearly)</span>
       </button>
-      <button onclick="showDatabase()" id="sideDb" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-100 transition-all font-bold text-sm">
+      <button onclick="showDatabase()" id="sideDb" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 font-bold text-sm">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3zM4 11h16M11 4v7" stroke-width="2"></path></svg>
         <span>Database</span>
       </button>
@@ -79,7 +82,7 @@
   <div class="lg:ml-64 min-h-screen flex flex-col">
     <header class="h-16 glass border-b border-slate-200 px-8 flex items-center justify-between">
       <h2 id="pageTitle" class="font-bold text-slate-700 text-lg">Monthly Gross Calculator</h2>
-      <button id="refresh" class="text-xs font-extrabold text-indigo-600 hover:text-indigo-800 uppercase tracking-widest transition-colors">Refresh Feed</button>
+      <button id="refresh" class="text-xs font-extrabold text-indigo-600 uppercase tracking-widest transition-colors">Refresh Data</button>
     </header>
 
     <main class="p-8">
@@ -90,15 +93,9 @@
               <div><label class="text-[10px] font-bold text-slate-500 uppercase">Emp ID</label><input id="empId" required class="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm" placeholder="1302"></div>
               <div><label class="text-[10px] font-bold text-slate-500 uppercase">Name</label><input id="name" required class="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm" placeholder="Anup"></div>
             </div>
-            <div id="monthlyInputWrap">
-              <label class="text-[10px] font-bold text-slate-500 uppercase">Gross Monthly (₹)</label>
-              <input id="grossMonthly" type="number" class="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold">
-            </div>
-            <div id="yearlyInputWrap" style="display:none;">
-              <label class="text-[10px] font-bold text-slate-500 uppercase">Target Yearly CTC (₹)</label>
-              <input id="yearlyCtc" type="number" class="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold">
-            </div>
-
+            <div id="monthlyInputWrap"><label class="text-[10px] font-bold text-slate-500 uppercase">Gross Monthly (₹)</label><input id="grossMonthly" type="number" class="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"></div>
+            <div id="yearlyInputWrap" style="display:none;"><label class="text-[10px] font-bold text-slate-500 uppercase">Target Yearly CTC (₹)</label><input id="yearlyCtc" type="number" class="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"></div>
+            
             <div class="space-y-3">
               <label class="flex items-center justify-between p-3 border border-indigo-100 bg-indigo-50/30 rounded-xl cursor-pointer">
                 <span class="text-xs font-bold text-indigo-700 uppercase">Manual Allowance Split</span>
@@ -114,11 +111,11 @@
             <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
                 <div class="flex items-center justify-between">
                     <label class="flex items-center gap-2 text-xs font-bold text-slate-600"><input id="epfCheck" type="checkbox" class="w-4 h-4 accent-indigo-600"> EPF</label>
-                    <div id="epfConfig" class="hidden"><input id="epfVal" type="number" placeholder="Amt" class="w-16 p-1 text-[10px] border rounded bg-white font-bold"></div>
+                    <div id="epfConfig" class="hidden"><input id="epfVal" type="number" placeholder="Amt" class="w-20 p-1 text-[10px] border rounded bg-white font-bold"></div>
                 </div>
                 <div class="flex items-center justify-between">
                     <label class="flex items-center gap-2 text-xs font-bold text-slate-600"><input id="ptCheck" type="checkbox" class="w-4 h-4 accent-indigo-600"> PT</label>
-                    <div id="ptConfig" class="hidden"><input id="ptVal" type="number" value="200" class="w-16 p-1 text-[10px] border rounded bg-white font-bold"></div>
+                    <div id="ptConfig" class="hidden"><input id="ptVal" type="number" value="200" class="w-20 p-1 text-[10px] border rounded bg-white font-bold"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <label class="flex items-center gap-2 text-xs font-bold text-slate-600"><input id="bonusCheck" type="checkbox" class="accent-indigo-600"> Bonus</label>
@@ -132,34 +129,19 @@
 
         <section class="xl:col-span-8 space-y-6">
           <div class="flex justify-between items-center px-2">
-            <h3 class="font-bold text-slate-400 text-[10px] uppercase tracking-[0.2em]">Breakdown Preview (Hover for Formulas)</h3>
-            <button id="downloadPdf" class="hidden text-xs font-bold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-full hover:bg-indigo-100 transition-all flex items-center gap-2">Download Pro Report</button>
+            <h3 class="font-bold text-slate-400 text-[10px] uppercase tracking-[0.2em]">Breakdown Preview</h3>
+            <button id="downloadPdf" class="hidden text-xs font-bold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-full flex items-center gap-2 hover:bg-indigo-100">Download Professional Report</button>
           </div>
           <div id="previewCard" class="grid grid-cols-1 md:grid-cols-3 gap-4 p-2 bg-slate-50/50 rounded-3xl min-h-[400px]">
-             <div class="col-span-full py-32 flex flex-col items-center justify-center text-slate-300 border-2 border-dashed border-slate-200 rounded-3xl uppercase tracking-widest text-[10px] font-bold">Calculate preview to see breakdown</div>
+             <div class="col-span-full py-32 flex flex-col items-center justify-center text-slate-300 border-2 border-dashed border-slate-200 rounded-3xl uppercase text-[10px] font-bold italic">Select mode from sidebar & calculate</div>
           </div>
         </section>
       </div>
 
       <div id="dbPage" class="hidden animate-fadeIn">
         <section class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Master Database</h3>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr class="bg-slate-50/50 text-slate-400 text-[10px] uppercase tracking-widest font-extrabold border-b border-slate-100">
-                  <th class="px-8 py-5 text-indigo-600 font-black">Employee</th>
-                  <th class="px-8 py-5">Gross Monthly</th>
-                  <th class="px-8 py-5 font-bold text-green-600">In-Hand Salary</th>
-                  <th class="px-8 py-5 font-black text-indigo-600">Yearly CTC</th>
-                  <th class="px-8 py-5 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody id="tableBody" class="divide-y divide-slate-50 text-sm"></tbody>
-            </table>
-          </div>
+          <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50"><h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Master Database</h3></div>
+          <div class="overflow-x-auto"><table class="w-full text-left border-collapse min-w-[800px]"><thead><tr class="bg-slate-50/50 text-slate-400 text-[10px] uppercase font-extrabold border-b border-slate-100"><th class="px-8 py-5 text-indigo-600">Employee</th><th class="px-8 py-5">Gross Monthly</th><th class="px-8 py-5 text-green-600 font-bold">In-Hand Salary</th><th class="px-8 py-5 text-indigo-600 font-black">Yearly CTC</th><th class="px-8 py-5 text-right">Status</th></tr></thead><tbody id="tableBody" class="divide-y divide-slate-50 text-sm"></tbody></table></div>
         </section>
       </div>
     </main>
@@ -180,9 +162,7 @@ function setMode(mode) {
     qs('#yearlyInputWrap').style.display = mode === 'yearly' ? 'block' : 'none';
     qs('#pageTitle').innerText = mode === 'monthly' ? "Monthly Gross Calculator" : "Yearly CTC Calculator";
     qs('#sideMonthly').classList.toggle('active', mode === 'monthly');
-    qs('#sideMonthly').classList.toggle('text-slate-500', mode !== 'monthly');
     qs('#sideYearly').classList.toggle('active', mode === 'yearly');
-    qs('#sideYearly').classList.toggle('text-slate-500', mode !== 'yearly');
     qs('#sideDb').classList.remove('active');
     resetCalc();
 }
@@ -199,15 +179,15 @@ function showDatabase() {
 
 function resetCalc() { isCalculated = false; qs('#addBtn').disabled = true; qs('#previewCard').innerHTML = ''; qs('#downloadPdf').classList.add('hidden'); }
 
-// Calculation Engine
+// Calculation Logic
 function calculateAllFields(inputs) {
     let { grossMonthly, manualMode, manualBasic, manualHra, manualTA, epfCheck, epfManualVal, bonusCheck, fuelCheck, ptCheck, ptManualVal } = inputs;
     let basic = manualMode ? (Number(manualBasic) || 0) : Math.round(grossMonthly * 0.5);
     let hra = manualMode ? (Number(manualHra) || 0) : Math.round(grossMonthly * 0.35);
     let ta = manualMode ? (Number(manualTA) || 0) : Math.round(grossMonthly * 0.15);
     if(manualMode) grossMonthly = basic + hra + ta;
-    
     let fuel = fuelCheck ? (grossMonthly >= 50000 ? 7500 : Math.round(grossMonthly * 0.15)) : 0;
+    let bonus = bonusCheck ? grossMonthly : 0;
     let epfEmp = epfCheck ? (epfManualVal > 0 ? Number(epfManualVal) : Math.min(Math.round(basic * 0.12), 1800)) : 0;
     let esiBase = basic + hra;
     let isEsi = grossMonthly <= 21000;
@@ -216,14 +196,15 @@ function calculateAllFields(inputs) {
     let pt = ptCheck ? (Number(ptManualVal) || 200) : 0;
     let edli = epfCheck ? Math.min(Math.round(basic * 0.005), 75) : 0;
     let admin = epfCheck ? Math.min(Math.round(basic * 0.005), 75) : 0;
-    let monthlyCTC = grossMonthly + fuel + epfEmp + esiEmployer + edli + admin;
+    let monthlyEmployerContributions = epfEmp + esiEmployer + edli + admin;
+    let monthlyCTC = grossMonthly + fuel + monthlyEmployerContributions;
     
     return {
-        'Basic Salary': basic, 'HRA': hra, 'TA': ta, 'Fuel Allowance': fuel, 'Bonus (Monthly)': bonusCheck ? grossMonthly : 0,
+        'Basic Salary': basic, 'HRA': hra, 'TA': ta, 'Fuel Allowance': fuel, 'Bonus (Monthly)': bonus,
         'EPF (Employer)': epfEmp, 'EPF (Employee)': epfEmp, 'ESI (Employer)': esiEmployer, 'ESI (Employee)': esiEmployee,
         'PT Amount': pt, 'EDLi': edli, 'Admin Charges': admin,
         'Monthly Gross': grossMonthly, 'Monthly CTC': monthlyCTC,
-        'Yearly CTC': (monthlyCTC * 12) + (bonusCheck ? grossMonthly : 0),
+        'Yearly CTC': (monthlyCTC * 12) + bonus,
         'In-Hand Salary': (basic + hra + ta + fuel) - (epfEmp + esiEmployee + pt)
     };
 }
@@ -237,42 +218,6 @@ function findGrossFromTarget(targetCTC, options) {
         bestGuess = guess;
     }
     return bestGuess;
-}
-
-function showPreview() {
-    const base = { manualMode: qs('#manualMode').checked, manualBasic: qs('#manualBasic').value, manualHra: qs('#manualHra').value, manualTA: qs('#manualTA').value, epfCheck: qs('#epfCheck').checked, epfManualVal: qs('#epfVal').value, bonusCheck: qs('#bonusCheck').checked, fuelCheck: qs('#fuelCheck').checked, ptCheck: qs('#ptCheck').checked, ptManualVal: qs('#ptVal').value };
-    let grossInput = activeMode === 'yearly' ? findGrossFromTarget(Number(qs('#yearlyCtc').value), base) : Number(qs('#grossMonthly').value);
-    const data = calculateAllFields({...base, grossMonthly: grossInput});
-    
-    const formulas = {
-        'Basic Salary': '50% of Monthly Gross', 'HRA': '35% of Monthly Gross', 'TA': '15% of Monthly Gross',
-        'EPF (Employer)': '12% of Basic (Max ₹1800)', 'EPF (Employee)': '12% of Basic',
-        'ESI (Employer)': '3.25% of Basic + HRA', 'ESI (Employee)': '0.75% of Basic + HRA',
-        'EDLi': '0.5% of Basic (Max ₹75)', 'Admin Charges': '0.5% of Basic (Max ₹75)',
-        'In-Hand Salary': 'Gross Payable - Employee Deductions', 'Monthly CTC': 'Gross + Employer Statutory Cost',
-        'Yearly CTC': '(Monthly CTC x 12) + Bonus'
-    };
-
-    qs('#previewCard').innerHTML = `<div class="col-span-full bg-indigo-600 rounded-3xl p-8 text-white flex justify-between items-center shadow-xl cursor-help" data-formula="${formulas['Yearly CTC']}"><div><p class="text-[10px] font-bold text-indigo-200 uppercase">Total CTC Yearly</p><h4 class="text-4xl font-black">${currency(data['Yearly CTC'])}</h4></div><div class="text-right" data-formula="${formulas['In-Hand Salary']}"><p class="text-[10px] font-bold text-indigo-200 uppercase">Monthly In-Hand</p><h4 class="text-2xl font-bold">${currency(data['In-Hand Salary'])}</h4></div></div>` + 
-    Object.entries(data).filter(([k]) => k !== 'Yearly CTC' && k !== 'In-Hand Salary').map(([k,v]) => `
-        <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:border-indigo-400 cursor-help group" data-formula="${formulas[k] || 'Calculated Component'}">
-            <p class="text-[9px] font-extrabold uppercase text-slate-400 tracking-widest group-hover:text-indigo-600">${k}</p>
-            <p class="text-lg font-bold text-slate-800 mt-1">${currency(v)}</p>
-        </div>`).join('');
-    
-    attachHoverLogic();
-    isCalculated = true; qs('#addBtn').disabled = false; qs('#downloadPdf').classList.remove('hidden');
-    preparePdfData(data, formulas);
-}
-
-function preparePdfData(data, formulas) {
-    qs('#pdfEmpInfo').innerText = `NAME: ${qs('#name').value.toUpperCase()} | ID: ${qs('#empId').value} | DATE: ${new Date().toLocaleDateString('en-GB')}`;
-    let rows = '';
-    const compOrder = ['Basic Salary', 'HRA', 'TA', 'Fuel Allowance', 'Monthly Gross', 'Bonus (Monthly)', 'EPF (Employer)', 'EPF (Employee)', 'ESI (Employer)', 'ESI (Employee)', 'EDLi', 'Admin Charges', 'In-Hand Salary', 'Monthly CTC', 'Yearly CTC'];
-    compOrder.forEach(key => {
-        rows += `<tr><td><strong>${key}</strong></td><td>${currency(data[key])}</td><td style="color: #666; font-style: italic;">${formulas[key] || '-'}</td></tr>`;
-    });
-    qs('#pdfRows').innerHTML = rows;
 }
 
 function attachHoverLogic() {
@@ -290,16 +235,51 @@ function attachHoverLogic() {
     });
 }
 
+function showPreview() {
+    const base = { manualMode: qs('#manualMode').checked, manualBasic: qs('#manualBasic').value, manualHra: qs('#manualHra').value, manualTA: qs('#manualTA').value, epfCheck: qs('#epfCheck').checked, epfManualVal: qs('#epfVal').value, bonusCheck: qs('#bonusCheck').checked, fuelCheck: qs('#fuelCheck').checked, ptCheck: qs('#ptCheck').checked, ptManualVal: qs('#ptVal').value };
+    let grossInput = activeMode === 'yearly' ? findGrossFromTarget(Number(qs('#yearlyCtc').value), base) : Number(qs('#grossMonthly').value);
+    const data = calculateAllFields({...base, grossMonthly: grossInput});
+    
+    const formulas = {
+        'Basic Salary': '50% of Monthly Gross', 'HRA': '35% of Monthly Gross', 'TA': '15% of Monthly Gross',
+        'EPF (Employer)': '12% of Basic (Max ₹1800)', 'EPF (Employee)': '12% of Basic',
+        'ESI (Employer)': '3.25% of Basic + HRA', 'ESI (Employee)': '0.75% of Basic + HRA',
+        'EDLi': '0.5% of Basic (Max ₹75)', 'Admin Charges': '0.5% of Basic (Max ₹75)',
+        'In-Hand Salary': 'Gross Payable - Employee Deductions', 'Monthly CTC': 'Gross + Employer Statutory Cost',
+        'Yearly CTC': '(Monthly CTC x 12) + Bonus'
+    };
+
+    qs('#previewCard').innerHTML = `<div class="col-span-full bg-indigo-600 rounded-3xl p-8 text-white flex justify-between items-center shadow-xl cursor-help" data-formula="${formulas['Yearly CTC']}"><div><p class="text-[10px] font-bold text-indigo-200">YEARLY CTC</p><h4 class="text-4xl font-black">${currency(data['Yearly CTC'])}</h4></div><div class="text-right" data-formula="${formulas['In-Hand Salary']}"><p class="text-[10px] font-bold text-indigo-200">IN-HAND SALARY</p><h4 class="text-2xl font-bold">${currency(data['In-Hand Salary'])}</h4></div></div>` + 
+    Object.entries(data).filter(([k]) => k !== 'Yearly CTC' && k !== 'In-Hand Salary').map(([k,v]) => `<div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:border-indigo-400 cursor-help group" data-formula="${formulas[k] || 'Calculated Value'}"><p class="text-[9px] font-extrabold uppercase text-slate-400 tracking-widest group-hover:text-indigo-600">${k}</p><p class="text-lg font-bold text-slate-800 mt-1">${currency(v)}</p></div>`).join('');
+    
+    attachHoverLogic();
+    isCalculated = true; qs('#addBtn').disabled = false; qs('#downloadPdf').classList.remove('hidden');
+    preparePdfData(data, formulas);
+}
+
+function preparePdfData(data, formulas) {
+    qs('#pdfEmpName').innerText = qs('#name').value.toUpperCase();
+    qs('#pdfEmpId').innerText = `Employee ID: ${qs('#empId').value}`;
+    qs('#pdfDate').innerText = new Date().toLocaleDateString('en-GB');
+    let rows = '';
+    const compOrder = ['Basic Salary', 'HRA', 'TA', 'Fuel Allowance', 'Monthly Gross', 'Bonus (Monthly)', 'EPF (Employer)', 'EPF (Employee)', 'ESI (Employer)', 'ESI (Employee)', 'EDLi', 'Admin Charges', 'In-Hand Salary', 'Monthly CTC', 'Yearly CTC'];
+    compOrder.forEach(key => { rows += `<tr><td><strong>${key}</strong></td><td>${currency(data[key])}</td><td style="color: #666; font-style: italic;">${formulas[key] || '-'}</td></tr>`; });
+    qs('#pdfRows').innerHTML = rows;
+}
+
 qs('#downloadPdf').addEventListener('click', () => {
     const element = qs('#pdfTemplate');
-    const opt = { margin: 15, filename: `${qs('#name').value}_Breakdown.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 3, logging: false, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-    html2pdf().from(element).set(opt).save();
+    element.style.display = 'block'; // Make visible for capture
+    const name = qs('#name').value || 'Employee';
+    const opt = { margin: 10, filename: `${name}_CTC_Structure.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+    html2pdf().from(element).set(opt).save().then(() => { element.style.display = 'none'; });
 });
 
-// Sync Listeners
+// Listeners
 qs('#manualMode').addEventListener('change', e => { qs('#manualFieldsWrap').classList.toggle('hidden', !e.target.checked); resetCalc(); });
 qs('#epfCheck').addEventListener('change', function() { qs('#epfConfig').classList.toggle('hidden', !this.checked); resetCalc(); });
 qs('#ptCheck').addEventListener('change', function() { qs('#ptConfig').classList.toggle('hidden', !this.checked); resetCalc(); });
+qs('#calcPreview').addEventListener('click', showPreview);
 
 qs('#empForm').addEventListener('submit', async e => {
     e.preventDefault();
@@ -309,7 +289,7 @@ qs('#empForm').addEventListener('submit', async e => {
     const data = calculateAllFields({...base, grossMonthly: grossInput});
     try {
         await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ 'Emp ID': qs('#empId').value, 'Name': qs('#name').value, ...data }) });
-        alert('Data Added Successfully!'); showDatabase(); e.target.reset();
+        alert('Success!'); showDatabase(); e.target.reset();
     } catch (err) { alert('Sync Error'); }
     finally { btn.textContent = 'Add to Database'; btn.disabled = false; }
 });
@@ -318,11 +298,10 @@ async function fetchList() {
     try {
         const res = await fetch(`${APPS_SCRIPT_URL}?action=get`);
         const json = await res.json();
-        qs('#tableBody').innerHTML = json.rows.map(r => `<tr class="border-b border-slate-50"><td class="px-8 py-5"><div class="font-bold text-slate-800">${r.Name}</div><div class="text-[9px] text-slate-400">#${r['Emp ID']}</div></td><td class="px-8 py-5 text-slate-600 font-bold">${currency(r['Monthly Gross'])}</td><td class="px-8 py-5 text-green-600 font-extrabold">${currency(r['In-Hand Salary'])}</td><td class="px-8 py-5 text-indigo-600 font-black">${currency(r['Yearly CTC'])}</td><td class="px-8 py-5 text-right"><span class="bg-indigo-50 text-indigo-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase">Verified</span></td></tr>`).join('');
+        qs('#tableBody').innerHTML = json.rows.map(r => `<tr class="border-b border-slate-50 hover:bg-indigo-50/30 transition-all"><td class="px-8 py-5"><div class="font-bold text-slate-800">${r.Name}</div><div class="text-[9px] text-slate-400 uppercase tracking-widest">#${r['Emp ID']}</div></td><td class="px-8 py-5 text-slate-600 font-bold">${currency(r['Monthly Gross'])}</td><td class="px-8 py-5 text-green-600 font-extrabold">${currency(r['In-Hand Salary'])}</td><td class="px-8 py-5 text-indigo-600 font-black">${currency(r['Yearly CTC'])}</td><td class="px-8 py-5 text-right"><span class="bg-indigo-50 text-indigo-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase">Verified</span></td></tr>`).join('');
     } catch (e) { console.error(e); }
 }
 
-qs('#calcPreview').addEventListener('click', showPreview);
 window.onload = () => { qs('#epfCheck').checked = false; qs('#ptCheck').checked = false; fetchList(); };
 </script>
 </body>
