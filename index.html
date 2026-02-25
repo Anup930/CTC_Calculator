@@ -1,4 +1,4 @@
-<!-- V9.7 -->
+<!-- V 9.8.1 -->
 
 <!doctype html>
 <html lang="en">
@@ -21,7 +21,6 @@
       max-width: 240px; border: 1px solid #334155; line-height: 1.5;
     }
 
-    /* PDF Template: hidden from user but accessible to script */
     #pdfTemplate { display: none; width: 800px; padding: 40px; background: white; color: black; }
     .pdf-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     .pdf-table th, .pdf-table td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 12px; }
@@ -57,7 +56,7 @@
           <tbody id="pdfRows"></tbody>
       </table>
       <div style="margin-top: 30px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px;">
-          <p>Note: ESI calculated on Basic + HRA. EPF capped at ₹1,800. This is an official salary breakdown document.</p>
+          <p>Note: ESI calculated on Basic Salary only. EPF capped at ₹1,800. This is an official salary breakdown document.</p>
       </div>
   </div>
 
@@ -179,23 +178,32 @@ function showDatabase() {
 
 function resetCalc() { isCalculated = false; qs('#addBtn').disabled = true; qs('#previewCard').innerHTML = ''; qs('#downloadPdf').classList.add('hidden'); }
 
-// Calculation Logic
+// Updated Calculation Logic
 function calculateAllFields(inputs) {
     let { grossMonthly, manualMode, manualBasic, manualHra, manualTA, epfCheck, epfManualVal, bonusCheck, fuelCheck, ptCheck, ptManualVal } = inputs;
-    let basic = manualMode ? (Number(manualBasic) || 0) : Math.round(grossMonthly * 0.5);
-    let hra = manualMode ? (Number(manualHra) || 0) : Math.round(grossMonthly * 0.35);
-    let ta = manualMode ? (Number(manualTA) || 0) : Math.round(grossMonthly * 0.15);
+    
+    // NEW SPLIT: Basic 50%, HRA 25%, TA 25%
+    let basic = manualMode ? (Number(manualBasic) || 0) : Math.round(grossMonthly * 0.50);
+    let hra = manualMode ? (Number(manualHra) || 0) : Math.round(grossMonthly * 0.25);
+    let ta = manualMode ? (Number(manualTA) || 0) : Math.round(grossMonthly * 0.25);
+    
     if(manualMode) grossMonthly = basic + hra + ta;
+    
     let fuel = fuelCheck ? (grossMonthly >= 50000 ? 7500 : Math.round(grossMonthly * 0.15)) : 0;
     let bonus = bonusCheck ? grossMonthly : 0;
+    
     let epfEmp = epfCheck ? (epfManualVal > 0 ? Number(epfManualVal) : Math.min(Math.round(basic * 0.12), 1800)) : 0;
-    let esiBase = basic + hra;
-    let isEsi = grossMonthly <= 21000;
+    
+    // ESIC CALCULATED ONLY ON BASIC NOW
+    let esiBase = basic; 
+    let isEsi = basic <= 21000;
     let esiEmployee = isEsi ? Math.round(esiBase * 0.0075) : 0;
     let esiEmployer = isEsi ? Math.round(esiBase * 0.0325) : 0;
+    
     let pt = ptCheck ? (Number(ptManualVal) || 200) : 0;
     let edli = epfCheck ? Math.min(Math.round(basic * 0.005), 75) : 0;
     let admin = epfCheck ? Math.min(Math.round(basic * 0.005), 75) : 0;
+    
     let monthlyEmployerContributions = epfEmp + esiEmployer + edli + admin;
     let monthlyCTC = grossMonthly + fuel + monthlyEmployerContributions;
     
@@ -241,11 +249,17 @@ function showPreview() {
     const data = calculateAllFields({...base, grossMonthly: grossInput});
     
     const formulas = {
-        'Basic Salary': '50% of Monthly Gross', 'HRA': '35% of Monthly Gross', 'TA': '15% of Monthly Gross',
-        'EPF (Employer)': '12% of Basic (Max ₹1800)', 'EPF (Employee)': '12% of Basic',
-        'ESI (Employer)': '3.25% of Basic + HRA', 'ESI (Employee)': '0.75% of Basic + HRA',
-        'EDLi': '0.5% of Basic (Max ₹75)', 'Admin Charges': '0.5% of Basic (Max ₹75)',
-        'In-Hand Salary': 'Gross Payable - Employee Deductions', 'Monthly CTC': 'Gross + Employer Statutory Cost',
+        'Basic Salary': '50% of Monthly Gross', 
+        'HRA': '25% of Monthly Gross', 
+        'TA': '25% of Monthly Gross',
+        'EPF (Employer)': '12% of Basic (Max ₹1800)', 
+        'EPF (Employee)': '12% of Basic',
+        'ESI (Employer)': '3.25% of Basic Salary', 
+        'ESI (Employee)': '0.75% of Basic Salary',
+        'EDLi': '0.5% of Basic (Max ₹75)', 
+        'Admin Charges': '0.5% of Basic (Max ₹75)',
+        'In-Hand Salary': 'Gross Payable - Employee Deductions', 
+        'Monthly CTC': 'Gross + Employer Statutory Cost',
         'Yearly CTC': '(Monthly CTC x 12) + Bonus'
     };
 
@@ -269,13 +283,12 @@ function preparePdfData(data, formulas) {
 
 qs('#downloadPdf').addEventListener('click', () => {
     const element = qs('#pdfTemplate');
-    element.style.display = 'block'; // Make visible for capture
+    element.style.display = 'block';
     const name = qs('#name').value || 'Employee';
     const opt = { margin: 10, filename: `${name}_CTC_Structure.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
     html2pdf().from(element).set(opt).save().then(() => { element.style.display = 'none'; });
 });
 
-// Listeners
 qs('#manualMode').addEventListener('change', e => { qs('#manualFieldsWrap').classList.toggle('hidden', !e.target.checked); resetCalc(); });
 qs('#epfCheck').addEventListener('change', function() { qs('#epfConfig').classList.toggle('hidden', !this.checked); resetCalc(); });
 qs('#ptCheck').addEventListener('change', function() { qs('#ptConfig').classList.toggle('hidden', !this.checked); resetCalc(); });
